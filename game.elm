@@ -4,6 +4,7 @@ import Color exposing (..)
 import Time exposing (..)
 import Keyboard
 import Window
+import Debug
 
 -- CONSTANTS
 
@@ -89,9 +90,12 @@ updateShooting isShooting ship =
 
 updatePlayer : (Float, Keys) -> Ship -> Ship
 updatePlayer (dt, keys) ship =
-  let newVel      = { x = toFloat keys.x, y = 0}
+  let newVel      = { x = toFloat keys.x, y = 0 }
       isShooting  = keys.y > 0
-  in  updateVel newVel (updateShooting isShooting (shipPhysics dt ship))
+  in  ship
+        |> shipPhysics dt
+        |> updateShooting isShooting
+        |> updateVel newVel
 
 updateEnemies : Float -> List Ship -> List Ship
 updateEnemies dt enemies =
@@ -123,7 +127,10 @@ update (dt, keys) world =
       shots   = world.shots
                   |> updateShots dt
                   |> addShot player
-                  |> List.filter (\shot -> shot.pos.y < shotMaxY && shot.pos.y > shotMinY)
+                  |> List.filter (\shot ->
+                                    shot.pos.y < shotMaxY &&
+                                    shot.pos.y > shotMinY)
+      debug   = Debug.watch "World" world
   in  { world | player  <- player
               , enemies <- enemies
               , shots   <- shots }
@@ -154,7 +161,8 @@ render (w, h) world =
       player =
         ngon 4 (h' / 20)
           |> filled translucentGray
-          |> move (world.player.pos.x * r * moveRatio, world.player.pos.y * r * moveRatio)
+          |> move (world.player.pos.x * r * moveRatio,
+                   world.player.pos.y * r * moveRatio)
           |> toBottom r
       shots =
         List.map (renderShot r) world.shots
@@ -171,4 +179,6 @@ inputSignal =
   in  Signal.sampleOn delta tuples
 
 main : Signal Element
-main = Signal.map2 render Window.dimensions (Signal.foldp update initWorld inputSignal)
+main = Signal.map2 render
+           Window.dimensions
+          (Signal.foldp update initWorld inputSignal)
