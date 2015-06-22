@@ -8,8 +8,9 @@ import Window
 -- CONSTANTS
 
 shotMinY  = -1
-moveSpeed = 0.5
-shotMaxY  = 1 / moveSpeed
+moveRatio = 0.5
+shotMaxY  = 1 / moveRatio
+translucentGray = rgba 0 0 0 0.2
 
 -- MODEL
 
@@ -137,8 +138,8 @@ toBottom r form =
 renderShot : Float -> Shot -> Form
 renderShot r shot =
   ngon 4 (r/200)
-    |> filled black
-    |> move (shot.pos.x * r * moveSpeed, shot.pos.y * r * moveSpeed)
+    |> filled translucentGray
+    |> move (shot.pos.x * r * moveRatio, shot.pos.y * r * moveRatio)
     |> toBottom r
 
 
@@ -148,12 +149,12 @@ render (w, h) world =
       r = h'
       bg =
         rect (w' * 2) (h' * 2)
-          |> filled lightBlue
+          |> filled (rgb 230 240 255)
           |> move (w' * -0.5, h' * -0.5)
       player =
-        ngon 4 (h'/20)
-          |> filled white
-          |> move (world.player.pos.x * r * moveSpeed, world.player.pos.y * r * moveSpeed)
+        ngon 4 (h' / 20)
+          |> filled translucentGray
+          |> move (world.player.pos.x * r * moveRatio, world.player.pos.y * r * moveRatio)
           |> toBottom r
       shots =
         List.map (renderShot r) world.shots
