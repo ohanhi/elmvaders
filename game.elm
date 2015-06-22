@@ -3,6 +3,7 @@ import Graphics.Collage exposing (..)
 import Color exposing (..)
 import Time exposing (..)
 import Keyboard
+import Window
 
 -- CONSTANTS
 
@@ -141,15 +142,16 @@ renderShot r shot =
     |> toBottom r
 
 
-render : World -> Element
-render world =
-  let r = 600
+render : (Int, Int) -> World -> Element
+render (w, h) world =
+  let (w', h') = (toFloat w, toFloat h)
+      r = h'
       bg =
-        rect (r * 2) (r * 2)
+        rect (w' * 2) (h' * 2)
           |> filled lightBlue
-          |> move (r * -0.5, r * -0.5)
+          |> move (w' * -0.5, h' * -0.5)
       player =
-        ngon 4 (r/20)
+        ngon 4 (h'/20)
           |> filled white
           |> move (world.player.pos.x * r * moveSpeed, world.player.pos.y * r * moveSpeed)
           |> toBottom r
@@ -157,7 +159,7 @@ render world =
         List.map (renderShot r) world.shots
       enemies =
         List.map (renderShot r) world.shots
-  in  (collage r r
+  in  (collage w h
           (bg :: player :: (shots ++ enemies)))
 
 -- SIGNALS
@@ -168,4 +170,4 @@ inputSignal =
   in  Signal.sampleOn delta tuples
 
 main : Signal Element
-main = Signal.map render (Signal.foldp update initWorld inputSignal)
+main = Signal.map2 render Window.dimensions (Signal.foldp update initWorld inputSignal)
