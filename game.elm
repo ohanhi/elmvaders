@@ -48,6 +48,12 @@ initShot =
   , vel = zeroVec2
   }
 
+initWorld : World
+initWorld =
+  { player = initShip
+  , enemies = []
+  , shots = []
+  }
 
 
 -- UPDATE
@@ -57,22 +63,37 @@ applyPhysics dt ship =
       (vx,vy) = ship.vel
   in  { ship | pos <- (x + vx * dt, y) }
 
-updateVx : Float -> Ship -> Ship
-updateVx newVx ship =
-  let (vx, vy)  = ship.vel
-      newVel    = (newVx, vy)
-  in  { ship | vel <- newVel }
+updateVel : (Float, Float) -> Ship -> Ship
+updateVel newVel ship =
+  { ship | vel <- newVel }
 
 updateShooting : Bool -> Ship -> Ship
 updateShooting isShooting ship =
   { ship | shooting <- isShooting }
 
-update : (Float, Keys) -> Ship -> Ship
-update (dt, keys) ship =
-  let newVel      = toFloat keys.x
+updatePlayer : (Float, Keys) -> Ship -> Ship
+updatePlayer (dt, keys) ship =
+  let newVel      = (toFloat keys.x, 0)
       isShooting  = keys.y > 0
-  in  updateVx newVel (updateShooting isShooting (applyPhysics dt ship))
+  in  updateVel newVel (updateShooting isShooting (applyPhysics dt ship))
 
+updateEnemies : Float -> List Ship -> List Ship
+updateEnemies dt enemies =
+  List.map (applyPhysics dt) enemies
+
+updateShots : Float -> List Shot -> List Shot
+updateShots dt shots =
+  shots
+
+-- take dt, `Keys` and `World`, return next state
+update : (Float, Keys) -> World -> World
+update (dt, keys) world =
+  let player  = updatePlayer (dt, keys) world.player
+      enemies = updateEnemies dt world.enemies
+      shots   = updateShots dt world.shots
+  in  { world | player  <- player
+              , enemies <- enemies
+              , shots   <- shots }
 
 -- SIGNALS
 inputSignal : Signal (Float, Keys)
@@ -82,4 +103,4 @@ inputSignal =
   in  Signal.sampleOn delta tuples
 
 main : Signal Element
-main = Signal.map show (Signal.foldp update initShip inputSignal)
+main = Signal.map show (Signal.foldp update initWorld inputSignal)
