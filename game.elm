@@ -5,6 +5,7 @@ import Time exposing (..)
 import Keyboard
 import Window
 import Debug
+import Array
 
 -- CONSTANTS
 
@@ -62,10 +63,17 @@ initShot =
 initWorld : World
 initWorld =
   { player = initShip
-  , enemies = []
+  , enemies = initEnemies
   , shots = []
   }
 
+initEnemies : List Ship
+initEnemies =
+  let range = Array.toList (Array.initialize 10 identity)
+      createEnemy = (\n ->
+        { initShip | pos <- { x = -1 + toFloat n / 5, y = 0.8 }
+                   , vel <- { x = 0, y = -0.1 } })
+  in  List.map createEnemy range
 -- HELPERS
 
 vecScalarMul : Vec2 -> Float -> Vec2
@@ -144,11 +152,19 @@ toBottom r form =
 
 renderShot : Float -> Shot -> Form
 renderShot r shot =
-  ngon 4 (r/200)
-    |> filled translucentGray
-    |> move (shot.pos.x * r * moveRatio, shot.pos.y * r * moveRatio)
-    |> toBottom r
+  let (x, y) = (shot.pos.x, shot.pos.y)
+  in  ngon 4 (r/200)
+        |> filled translucentGray
+        |> move (x * r * moveRatio, y * r * moveRatio)
+        |> toBottom r
 
+renderEnemy : Float -> Ship -> Form
+renderEnemy r enemy =
+  let (x, y) = (enemy.pos.x, enemy.pos.y)
+  in  ngon 3 (r/50)
+        |> filled translucentGray
+        |> rotate (degrees 30)
+        |> move (x * r * moveRatio, y * r * moveRatio)
 
 render : (Int, Int) -> World -> Element
 render (w, h) world =
@@ -167,7 +183,7 @@ render (w, h) world =
       shots =
         List.map (renderShot r) world.shots
       enemies =
-        List.map (renderShot r) world.shots
+        List.map (renderEnemy r) world.enemies
   in  (collage w h
           (bg :: player :: (shots ++ enemies)))
 
