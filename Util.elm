@@ -21,9 +21,9 @@ vecSubtract : Vec2 -> Vec2 -> Vec2
 vecSubtract a b =
   vecAdd a (vecScalarMul b -1)
 
-dotProduct : Vec2 -> Vec2 -> Vec2
+dotProduct : Vec2 -> Vec2 -> Float
 dotProduct a b =
-  { x = a.x * b.x, y = a.y * b.y }
+  a.x * b.x + a.y * b.y
 
 -- rectangle in 2D space
 type alias Rectangle = { center : Vec2, size : Vec2 }
