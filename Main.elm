@@ -1,3 +1,5 @@
+module Main where
+
 import Graphics.Element exposing (..)
 import Graphics.Collage exposing (..)
 import Color exposing (..)
@@ -6,6 +8,9 @@ import Keyboard
 import Window
 import Debug
 import Array
+
+import Util exposing (..)
+import Ship exposing (..)
 
 -- CONSTANTS
 
@@ -16,24 +21,10 @@ translucentGray = rgba 0 0 0 0.2
 
 -- MODEL
 
--- arrow keys
-type alias Keys = { x : Int, y : Int }
-
--- point in 2D space
-type alias Vec2 = { x : Float, y : Float }
-
 -- "bullet"
 type alias Shot =
   { pos : Vec2
   , vel : Vec2
-  }
-
--- player controls a Ship
--- enemies are also Ships
-type alias Ship =
-  { pos : Vec2
-  , vel : Vec2
-  , shooting : Bool
   }
 
 type alias World =
@@ -43,16 +34,6 @@ type alias World =
   }
 
 -- initial values for records
-
-zeroVec2 : Vec2
-zeroVec2 = { x = 0, y = 0 }
-
-initShip : Ship
-initShip =
-  { pos = zeroVec2
-  , vel = zeroVec2
-  , shooting = False
-  }
 
 initShot : Shot
 initShot =
@@ -81,20 +62,6 @@ vecScalarMul v c =
   { x = v.x * c, y = v.y * c }
 
 -- UPDATE
-shipPhysics : Float -> Ship -> Ship
-shipPhysics dt ship =
-  let p = ship.pos
-      v = ship.vel
-  in  { ship | pos <- { x = p.x + v.x * dt
-                      , y = p.y + v.y * dt } }
-
-updateVel : Vec2 -> Ship -> Ship
-updateVel newVel ship =
-  { ship | vel <- newVel }
-
-updateShooting : Bool -> Ship -> Ship
-updateShooting isShooting ship =
-  { ship | shooting <- isShooting }
 
 updatePlayer : (Float, Keys) -> Ship -> Ship
 updatePlayer (dt, keys) ship =
