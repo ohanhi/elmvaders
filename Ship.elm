@@ -17,8 +17,8 @@ initShip =
   , shooting = False
   }
 
-shipPhysics : Float -> Ship -> Ship
-shipPhysics dt ship =
+applyPhysics : Float -> Ship -> Ship
+applyPhysics dt ship =
   let p = ship.pos
       v = ship.vel
   in  { ship | pos <- { x = p.x + v.x * dt

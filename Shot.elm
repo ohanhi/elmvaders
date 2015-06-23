@@ -14,8 +14,8 @@ initShot =
   , vel = zeroVec2
   }
 
-shotPhysics : Float -> Shot -> Shot
-shotPhysics dt shot =
+applyPhysics : Float -> Shot -> Shot
+applyPhysics dt shot =
   let p = shot.pos
       v = shot.vel
   in  { shot | pos <- { x = p.x + v.x * dt

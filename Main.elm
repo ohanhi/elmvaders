@@ -10,8 +10,8 @@ import Debug
 import Array
 
 import Util exposing (..)
-import Ship exposing (..)
-import Shot exposing (..)
+import Ship exposing (Ship, initShip)
+import Shot exposing (Shot, initShot)
 
 -- CONSTANTS
 
@@ -53,13 +53,13 @@ updatePlayer (dt, keys) ship =
   let newVel      = { x = toFloat keys.x, y = 0 }
       isShooting  = keys.y > 0
   in  ship
-        |> shipPhysics dt
-        |> updateShooting isShooting
-        |> updateVel newVel
+        |> Ship.applyPhysics dt
+        |> Ship.updateShooting isShooting
+        |> Ship.updateVel newVel
 
 updateEnemies : Float -> List Ship -> List Ship
 updateEnemies dt enemies =
-  List.map (shipPhysics dt) enemies
+  List.map (Ship.applyPhysics dt) enemies
 
 addShot : Ship -> List Shot -> List Shot
 addShot player shots =
@@ -70,7 +70,7 @@ addShot player shots =
 
 updateShots : Float -> List Shot -> List Shot
 updateShots dt shots =
-  List.map (shotPhysics dt) shots
+  List.map (Shot.applyPhysics dt) shots
 
 -- take dt, `Keys` and `World`, return next state
 update : (Float, Keys) -> World -> World
@@ -129,8 +129,9 @@ render (w, h) world =
         List.map (renderShot r) world.shots
       enemies =
         List.map (renderEnemy r) world.enemies
-  in  (collage w h
-          (bg :: player :: (shots ++ enemies)))
+      allForms =
+        bg :: player :: shots ++ enemies
+  in  collage w h allForms
 
 -- SIGNALS
 inputSignal : Signal (Float, Keys)
