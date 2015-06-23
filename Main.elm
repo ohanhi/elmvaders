@@ -11,6 +11,7 @@ import Array
 
 import Util exposing (..)
 import Ship exposing (..)
+import Shot exposing (..)
 
 -- CONSTANTS
 
@@ -21,12 +22,6 @@ translucentGray = rgba 0 0 0 0.2
 
 -- MODEL
 
--- "bullet"
-type alias Shot =
-  { pos : Vec2
-  , vel : Vec2
-  }
-
 type alias World =
   { player  : Ship
   , enemies : List Ship
@@ -34,12 +29,6 @@ type alias World =
   }
 
 -- initial values for records
-
-initShot : Shot
-initShot =
-  { pos = zeroVec2
-  , vel = zeroVec2
-  }
 
 initWorld : World
 initWorld =
@@ -55,11 +44,7 @@ initEnemies =
         { initShip | pos <- { x = -1 + toFloat n / 5, y = 0.8 }
                    , vel <- { x = 0, y = -0.1 } })
   in  List.map createEnemy range
--- HELPERS
 
-vecScalarMul : Vec2 -> Float -> Vec2
-vecScalarMul v c =
-  { x = v.x * c, y = v.y * c }
 
 -- UPDATE
 
@@ -75,13 +60,6 @@ updatePlayer (dt, keys) ship =
 updateEnemies : Float -> List Ship -> List Ship
 updateEnemies dt enemies =
   List.map (shipPhysics dt) enemies
-
-shotPhysics : Float -> Shot -> Shot
-shotPhysics dt shot =
-  let p = shot.pos
-      v = shot.vel
-  in  { shot | pos <- { x = p.x + v.x * dt
-                      , y = p.y + v.y * dt } }
 
 addShot : Ship -> List Shot -> List Shot
 addShot player shots =
