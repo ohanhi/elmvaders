@@ -134,9 +134,8 @@ render (w, h) world =
   let (w', h') = (toFloat w, toFloat h)
       r = h'
       bg =
-        rect (w' * 2) (h' * 2)
+        rect w' h'
           |> filled (rgb 230 240 255)
-          |> move (w' * -0.5, h' * -0.5)
       player =
         ngon 4 (r * world.player.size.x)
           |> filled translucentGray
