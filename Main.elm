@@ -47,7 +47,7 @@ initEnemies =
       createEnemy = (\n ->
         { initShip | pos <- { x = -1 + toFloat n / 5, y = 1.8 }
                    , vel <- { x = 0, y = -0.02 }
-                   , size <- { x = 0.02, y = 0.02 }
+                   , size <- { x = 0.05, y = 0.02 }
                    })
   in  List.map createEnemy range
 
@@ -115,7 +115,7 @@ fromBottom r form =
 renderShot : Float -> Shot -> Form
 renderShot r shot =
   let (x, y) = (shot.pos.x, shot.pos.y)
-  in  ngon 4 (r * shotSize.x)
+  in  rect (r * shotSize.x) (r * shotSize.y)
         |> filled translucentGray
         |> fromBottom r
         |> move (x * r * moveRatio, y * r * moveRatio)
@@ -123,9 +123,8 @@ renderShot r shot =
 renderEnemy : Float -> Ship -> Form
 renderEnemy r enemy =
   let (x, y) = (enemy.pos.x, enemy.pos.y)
-  in  ngon 3 (r * enemy.size.x)
+  in  rect (r * enemy.size.x) (r * enemy.size.y)
         |> filled translucentGray
-        |> rotate (degrees 30)
         |> fromBottom r
         |> move (x * r * moveRatio, y * r * moveRatio)
 
