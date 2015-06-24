@@ -16,9 +16,10 @@ import Shot exposing (Shot, initShot)
 -- CONSTANTS
 
 shotMinY  = -1
+shotSize  = { x = 0.01, y = 0.01 }
 moveRatio = 0.5
 shotMaxY  = 1 / moveRatio
-translucentGray = rgba 0 0 0 0.2
+translucentGray = rgba 0 0 0 0.5
 
 -- MODEL
 
@@ -96,17 +97,17 @@ update (dt, keys) world =
 
 -- RENDER
 
-toBottom : Float -> Form -> Form
-toBottom r form =
+fromBottom : Float -> Form -> Form
+fromBottom r form =
   move (0, r * -0.5) form
 
 renderShot : Float -> Shot -> Form
 renderShot r shot =
   let (x, y) = (shot.pos.x, shot.pos.y)
-  in  ngon 4 (r/200)
+  in  ngon 4 (r * shotSize.x)
         |> filled translucentGray
+        |> fromBottom r
         |> move (x * r * moveRatio, y * r * moveRatio)
-        |> toBottom r
 
 renderEnemy : Float -> Ship -> Form
 renderEnemy r enemy =
@@ -114,6 +115,7 @@ renderEnemy r enemy =
   in  ngon 3 (r * enemy.size.x)
         |> filled translucentGray
         |> rotate (degrees 30)
+        |> fromBottom r
         |> move (x * r * moveRatio, y * r * moveRatio)
 
 render : (Int, Int) -> World -> Element
@@ -127,9 +129,9 @@ render (w, h) world =
       player =
         ngon 4 (r * world.player.size.x)
           |> filled translucentGray
+          |> fromBottom r
           |> move (world.player.pos.x * r * moveRatio,
                    world.player.pos.y * r * moveRatio)
-          |> toBottom r
       shots =
         List.map (renderShot r) world.shots
       enemies =
