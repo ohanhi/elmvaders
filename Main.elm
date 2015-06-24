@@ -16,10 +16,11 @@ import Shot exposing (Shot, initShot)
 -- CONSTANTS
 
 shotMinY  = -1
-shotSize  = { x = 0.01, y = 0.01 }
+shotSize  = { x = 0.005, y = 0.02 }
+shotMaxY  = 1
 moveRatio = 0.2
 playerMoveRatio = 0.3
-shotMaxY  = 1 / moveRatio
+shootDelay = 500 -- ms
 translucentGray = rgba 0 0 0 0.5
 
 -- MODEL
@@ -28,6 +29,7 @@ type alias World =
   { player  : Ship
   , enemies : List Ship
   , shots   : List Shot
+  , untilNextShot : Float
   }
 
 -- initial values for records
@@ -40,6 +42,7 @@ initWorld =
   { player = initPlayer
   , enemies = initEnemies
   , shots = []
+  , untilNextShot = 0
   }
 
 initEnemies : List Ship
@@ -77,9 +80,9 @@ updateEnemies : Float -> List Ship -> List Ship
 updateEnemies dt enemies =
   List.map (Ship.applyPhysics dt) enemies
 
-addShot : Ship -> List Shot -> List Shot
-addShot player shots =
-  if player.shooting
+maybeAddShot : Ship -> Float -> List Shot -> List Shot
+maybeAddShot player untilNextShot shots =
+  if player.shooting && untilNextShot <= 0
     then { initShot | pos <- player.pos
                     , vel <- { x = 0, y = 2 * moveRatio } } :: shots
     else shots
@@ -91,20 +94,31 @@ updateShots dt shots =
 -- take dt, `Keys` and `World`, return next state
 update : (Float, Keys) -> World -> World
 update (dt, keys) world =
-  let player  = updatePlayer (dt, keys) world.player
+  let dt'     = dt / 1000
+      player  = updatePlayer (dt', keys) world.player
       enemies = world.enemies
-                  |> updateEnemies dt
+                  |> updateEnemies dt'
                   |> List.filter (notHitWith world.shots)
       shots   = world.shots
-                  |> updateShots dt
-                  |> addShot player
-                  |> List.filter (\shot ->
-                                    shot.pos.y < shotMaxY &&
-                                    shot.pos.y > shotMinY)
+                  |> maybeAddShot player world.untilNextShot
+      untilNextShot =
+        if List.length shots == List.length world.shots
+          then
+            if world.untilNextShot > 0
+              then world.untilNextShot - dt
+              else 0
+          else shootDelay
+      updatedShots =
+        shots
+          |> updateShots dt'
+          |> List.filter (\shot ->
+                            shot.pos.y < shotMaxY &&
+                            shot.pos.y > shotMinY)
       debug   = Debug.watch "World" world
   in  { world | player  <- player
               , enemies <- enemies
-              , shots   <- shots }
+              , shots   <- updatedShots
+              , untilNextShot <- untilNextShot }
 
 
 -- RENDER
@@ -153,7 +167,7 @@ render (w, h) world =
 -- SIGNALS
 inputSignal : Signal (Float, Keys)
 inputSignal =
-  let delta = Signal.map (\n -> n / 1000) (fps 30)
+  let delta = fps 30
       tuples = Signal.map2 (,) delta Keyboard.arrows
   in  Signal.sampleOn delta tuples
 
