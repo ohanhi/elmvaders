@@ -30,9 +30,12 @@ type alias World =
 
 -- initial values for records
 
+initPlayer =
+  { initShip | size <- { x = 0.05, y = 0.05 } }
+
 initWorld : World
 initWorld =
-  { player = initShip
+  { player = initPlayer
   , enemies = initEnemies
   , shots = []
   }
@@ -42,7 +45,9 @@ initEnemies =
   let range = Array.toList (Array.initialize 10 identity)
       createEnemy = (\n ->
         { initShip | pos <- { x = -1 + toFloat n / 5, y = 0.8 }
-                   , vel <- { x = 0, y = -0.1 } })
+                   , vel <- { x = 0, y = -0.02 }
+                   , size <- { x = 0.02, y = 0.02 }
+                   })
   in  List.map createEnemy range
 
 
@@ -106,7 +111,7 @@ renderShot r shot =
 renderEnemy : Float -> Ship -> Form
 renderEnemy r enemy =
   let (x, y) = (enemy.pos.x, enemy.pos.y)
-  in  ngon 3 (r/50)
+  in  ngon 3 (r * enemy.size.x)
         |> filled translucentGray
         |> rotate (degrees 30)
         |> move (x * r * moveRatio, y * r * moveRatio)
@@ -120,7 +125,7 @@ render (w, h) world =
           |> filled (rgb 230 240 255)
           |> move (w' * -0.5, h' * -0.5)
       player =
-        ngon 4 (h' / 20)
+        ngon 4 (r * world.player.size.x)
           |> filled translucentGray
           |> move (world.player.pos.x * r * moveRatio,
                    world.player.pos.y * r * moveRatio)

@@ -5,15 +5,17 @@ import Util exposing (Vec2, zeroVec2)
 -- player controls a Ship
 -- enemies are also Ships
 type alias Ship =
-  { pos : Vec2
-  , vel : Vec2
+  { pos  : Vec2
+  , size : Vec2
+  , vel  : Vec2
   , shooting : Bool
   }
 
 initShip : Ship
 initShip =
-  { pos = zeroVec2
-  , vel = zeroVec2
+  { pos  = zeroVec2
+  , size = zeroVec2
+  , vel  = zeroVec2
   , shooting = False
   }
 
