@@ -17,7 +17,8 @@ import Shot exposing (Shot, initShot)
 
 shotMinY  = -1
 shotSize  = { x = 0.01, y = 0.01 }
-moveRatio = 0.5
+moveRatio = 0.2
+playerMoveRatio = 0.3
 shotMaxY  = 1 / moveRatio
 translucentGray = rgba 0 0 0 0.5
 
@@ -45,9 +46,9 @@ initEnemies : List Ship
 initEnemies =
   let range = Array.toList (Array.initialize 10 identity)
       createEnemy = (\n ->
-        { initShip | pos <- { x = -1 + toFloat n / 5, y = 1.8 }
-                   , vel <- { x = 0, y = -0.02 }
-                   , size <- { x = 0.05, y = 0.02 }
+        { initShip | pos <- { x = -0.5 + toFloat n / 10, y = 1 }
+                   , vel <- { x = 0, y = -0.1 * moveRatio }
+                   , size <- { x = 0.05, y = 0.025 }
                    })
   in  List.map createEnemy range
 
@@ -56,7 +57,7 @@ initEnemies =
 
 updatePlayer : (Float, Keys) -> Ship -> Ship
 updatePlayer (dt, keys) ship =
-  let newVel      = { x = toFloat keys.x, y = 0 }
+  let newVel      = { x = toFloat keys.x * playerMoveRatio, y = 0 }
       isShooting  = keys.y > 0
   in  ship
         |> Ship.applyPhysics dt
@@ -80,7 +81,7 @@ addShot : Ship -> List Shot -> List Shot
 addShot player shots =
   if player.shooting
     then { initShot | pos <- player.pos
-                    , vel <- { x = 0, y = 1 } } :: shots
+                    , vel <- { x = 0, y = 2 * moveRatio } } :: shots
     else shots
 
 updateShots : Float -> List Shot -> List Shot
@@ -118,7 +119,7 @@ renderShot r shot =
   in  rect (r * shotSize.x) (r * shotSize.y)
         |> filled translucentGray
         |> fromBottom r
-        |> move (x * r * moveRatio, y * r * moveRatio)
+        |> move (x * r, y * r)
 
 renderEnemy : Float -> Ship -> Form
 renderEnemy r enemy =
@@ -126,7 +127,7 @@ renderEnemy r enemy =
   in  rect (r * enemy.size.x) (r * enemy.size.y)
         |> filled translucentGray
         |> fromBottom r
-        |> move (x * r * moveRatio, y * r * moveRatio)
+        |> move (x * r, y * r)
 
 render : (Int, Int) -> World -> Element
 render (w, h) world =
@@ -139,8 +140,8 @@ render (w, h) world =
         ngon 4 (r * world.player.size.x)
           |> filled translucentGray
           |> fromBottom r
-          |> move (world.player.pos.x * r * moveRatio,
-                   world.player.pos.y * r * moveRatio)
+          |> move (world.player.pos.x * r,
+                   world.player.pos.y * r)
       shots =
         List.map (renderShot r) world.shots
       enemies =
