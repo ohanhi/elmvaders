@@ -45,7 +45,7 @@ initEnemies : List Ship
 initEnemies =
   let range = Array.toList (Array.initialize 10 identity)
       createEnemy = (\n ->
-        { initShip | pos <- { x = -1 + toFloat n / 5, y = 0.8 }
+        { initShip | pos <- { x = -1 + toFloat n / 5, y = 1.8 }
                    , vel <- { x = 0, y = -0.02 }
                    , size <- { x = 0.02, y = 0.02 }
                    })
@@ -62,6 +62,15 @@ updatePlayer (dt, keys) ship =
         |> Ship.applyPhysics dt
         |> Ship.updateShooting isShooting
         |> Ship.updateVel newVel
+
+notHitWith : List Shot -> Ship -> Bool
+notHitWith shots ship =
+  let shipHit shotRects ship =
+        shotRects
+          |> List.map (Util.overlap {center = ship.pos, size = ship.size})
+          |> List.any identity
+      shotRects = List.map (\s -> {center = s.pos, size = shotSize}) shots
+  in  not (shipHit shotRects ship)
 
 updateEnemies : Float -> List Ship -> List Ship
 updateEnemies dt enemies =
@@ -82,7 +91,9 @@ updateShots dt shots =
 update : (Float, Keys) -> World -> World
 update (dt, keys) world =
   let player  = updatePlayer (dt, keys) world.player
-      enemies = updateEnemies dt world.enemies
+      enemies = world.enemies
+                  |> updateEnemies dt
+                  |> List.filter (notHitWith world.shots)
       shots   = world.shots
                   |> updateShots dt
                   |> addShot player
