@@ -3283,7 +3283,7 @@ Elm.Main.make = function (_elm) {
                     128,
                     128))(f)));}
                _U.badCase($moduleName,
-               "between lines 149 and 152");
+               "between lines 179 and 182");
             }();
          });
          var body = fillAndMove({ctor: "_Tuple2"
@@ -3317,6 +3317,36 @@ Elm.Main.make = function (_elm) {
       $Ship.applyPhysics(dt),
       enemies);
    });
+   var hitTuple = F2(function (shotRectTuples,
+   shipRectTuple) {
+      return function () {
+         var $ = shipRectTuple,
+         ship = $._0,
+         shipR = $._1;
+         var hits = $List.filter(function (_) {
+            return _.hit;
+         })($List.map(function (_v4) {
+            return function () {
+               switch (_v4.ctor)
+               {case "_Tuple2": return {_: {}
+                                       ,hit: A2($Util.overlap,
+                                       _v4._1,
+                                       shipR)
+                                       ,shot: _v4._0};}
+               _U.badCase($moduleName,
+               "between lines 88 and 89");
+            }();
+         })(shotRectTuples));
+         var shots = A2($List.map,
+         function (_) {
+            return _.shot;
+         },
+         hits);
+         return {ctor: "_Tuple2"
+                ,_0: ship
+                ,_1: shots};
+      }();
+   });
    var World = F4(function (a,
    b,
    c,
@@ -3345,18 +3375,18 @@ Elm.Main.make = function (_elm) {
    0.5);
    var shootDelay = 500;
    var playerMoveRatio = 0.3;
-   var updatePlayer = F2(function (_v4,
+   var updatePlayer = F2(function (_v8,
    ship) {
       return function () {
-         switch (_v4.ctor)
+         switch (_v8.ctor)
          {case "_Tuple2":
             return function () {
-                 var isShooting = _U.cmp(_v4._1.y,
+                 var isShooting = _U.cmp(_v8._1.y,
                  0) > 0;
                  var newVel = {_: {}
-                              ,x: $Basics.toFloat(_v4._1.x) * playerMoveRatio
+                              ,x: $Basics.toFloat(_v8._1.x) * playerMoveRatio
                               ,y: 0};
-                 return $Ship.updateVel(newVel)($Ship.updateShooting(isShooting)($Ship.applyPhysics(_v4._0)(ship)));
+                 return $Ship.updateVel(newVel)($Ship.updateShooting(isShooting)($Ship.applyPhysics(_v8._0)(ship)));
               }();}
          _U.badCase($moduleName,
          "between lines 66 and 71");
@@ -3433,6 +3463,39 @@ Elm.Main.make = function (_elm) {
          ship));
       }();
    });
+   var findCollisions = F2(function (shots,
+   ships) {
+      return function () {
+         var shipRectTuples = A2($List.map,
+         function (s) {
+            return {ctor: "_Tuple2"
+                   ,_0: s
+                   ,_1: {_: {}
+                        ,center: s.pos
+                        ,size: s.size}};
+         },
+         ships);
+         var shotRectTuples = A2($List.map,
+         function (s) {
+            return {ctor: "_Tuple2"
+                   ,_0: s
+                   ,_1: {_: {}
+                        ,center: s.pos
+                        ,size: shotSize}};
+         },
+         shots);
+         return $List.filter(function (_v12) {
+            return function () {
+               switch (_v12.ctor)
+               {case "_Tuple2":
+                  return _U.cmp($List.length(_v12._1),
+                    0) > 0;}
+               _U.badCase($moduleName,
+               "on line 103, column 43 to 64");
+            }();
+         })($List.map(hitTuple(shotRectTuples))(shipRectTuples));
+      }();
+   });
    var renderShot = F2(function (r,
    shot) {
       return function () {
@@ -3448,15 +3511,15 @@ Elm.Main.make = function (_elm) {
          r * shotSize.y))));
       }();
    });
-   var render = F2(function (_v8,
+   var render = F2(function (_v16,
    world) {
       return function () {
-         switch (_v8.ctor)
+         switch (_v16.ctor)
          {case "_Tuple2":
             return function () {
                  var $ = {ctor: "_Tuple2"
-                         ,_0: $Basics.toFloat(_v8._0)
-                         ,_1: $Basics.toFloat(_v8._1)},
+                         ,_0: $Basics.toFloat(_v16._0)
+                         ,_1: $Basics.toFloat(_v16._1)},
                  w$ = $._0,
                  h$ = $._1;
                  var r = h$;
@@ -3488,40 +3551,73 @@ Elm.Main.make = function (_elm) {
                  shots,
                  enemies))));
                  return A3($Graphics$Collage.collage,
-                 _v8._0,
-                 _v8._1,
+                 _v16._0,
+                 _v16._1,
                  allForms);
               }();}
          _U.badCase($moduleName,
-         "between lines 166 and 182");
+         "between lines 196 and 212");
       }();
    });
    var shotMinY = -1;
-   var update = F2(function (_v12,
+   var update = F2(function (_v20,
    world) {
       return function () {
-         switch (_v12.ctor)
+         switch (_v20.ctor)
          {case "_Tuple2":
             return function () {
                  var debug = A2($Debug.watch,
                  "World",
                  world);
-                 var dt$ = _v12._0 / 1000;
+                 var collisions = A2(findCollisions,
+                 world.shots,
+                 world.enemies);
+                 var collidedShips = A2($List.map,
+                 function (_v24) {
+                    return function () {
+                       switch (_v24.ctor)
+                       {case "_Tuple2":
+                          return _v24._0;}
+                       _U.badCase($moduleName,
+                       "on line 129, column 43 to 44");
+                    }();
+                 },
+                 collisions);
+                 var collidedShots = A2($List.concatMap,
+                 function (_v28) {
+                    return function () {
+                       switch (_v28.ctor)
+                       {case "_Tuple2":
+                          return _v28._1;}
+                       _U.badCase($moduleName,
+                       "on line 130, column 54 to 59");
+                    }();
+                 },
+                 collisions);
+                 var dt$ = _v20._0 / 1000;
                  var player = A2(updatePlayer,
                  {ctor: "_Tuple2"
                  ,_0: dt$
-                 ,_1: _v12._1},
+                 ,_1: _v20._1},
                  world.player);
-                 var shots = A2(playerShoot,
+                 var shots = $List.filter(function (s) {
+                    return $Basics.not(A2($List.member,
+                    s,
+                    collidedShots));
+                 })(A2(playerShoot,
                  player,
-                 world.untilNextShot)(world.shots);
+                 world.untilNextShot)(world.shots));
                  var untilNextShot = _U.eq($List.length(shots),
                  $List.length(world.shots)) ? _U.cmp(world.untilNextShot,
-                 0) > 0 ? world.untilNextShot - _v12._0 : 0 : shootDelay;
-                 var enemies = $List.filter(notHitWith(world.shots))($List.filter(function (s) {
+                 0) > 0 ? world.untilNextShot - _v20._0 : 0 : shootDelay;
+                 var enemies = updateEnemies(dt$)($List.filter(function (s) {
                     return _U.cmp(s.pos.y,
                     groundLevel) > 0;
-                 })(updateEnemies(dt$)(world.enemies)));
+                 })($List.filter(function (s) {
+                    return $Basics.not(A2($List.member,
+                    s,
+                    collidedShips));
+                 })(world.enemies)));
                  var updatedShots = $List.filter(function (shot) {
                     return _U.cmp(shot.pos.y,
                     shotMaxY) < 0 && _U.cmp(shot.pos.y,
@@ -3536,7 +3632,7 @@ Elm.Main.make = function (_elm) {
                  world);
               }();}
          _U.badCase($moduleName,
-         "between lines 102 and 127");
+         "between lines 126 and 157");
       }();
    });
    var main = A3($Signal.map2,
@@ -3562,6 +3658,8 @@ Elm.Main.make = function (_elm) {
                       ,initEnemies: initEnemies
                       ,updatePlayer: updatePlayer
                       ,notHitWith: notHitWith
+                      ,hitTuple: hitTuple
+                      ,findCollisions: findCollisions
                       ,updateEnemies: updateEnemies
                       ,playerShoot: playerShoot
                       ,updateShots: updateShots
