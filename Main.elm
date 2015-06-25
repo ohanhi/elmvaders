@@ -70,15 +70,6 @@ updatePlayer (dt, keys) ship =
         |> Ship.updateShooting isShooting
         |> Ship.updateVel newVel
 
-notHitWith : List Shot -> Ship -> Bool
-notHitWith shots ship =
-  let shipHit shotRects ship =
-        shotRects
-          |> List.map (Util.overlap {center = ship.pos, size = ship.size})
-          |> List.any identity
-      shotRects = List.map (\s -> {center = s.pos, size = shotSize}) shots
-  in  not (shipHit shotRects ship)
-
 -- get tuple of given Ship, and the Shots that hit it (often an empty list)
 hitTuple : List (Shot, Rectangle) -> (Ship, Rectangle) -> (Ship, List Shot)
 hitTuple shotRectTuples shipRectTuple =
@@ -101,7 +92,6 @@ findCollisions shots ships =
   in  shipRectTuples
         |> List.map (hitTuple shotRectTuples)
         |> List.filter (\(ship, shots) -> List.length shots > 0)
-
 
 updateEnemies : Float -> List Ship -> List Ship
 updateEnemies dt enemies =
@@ -149,8 +139,6 @@ update (dt, keys) world =
                             shot.pos.y < shotMaxY &&
                             shot.pos.y > shotMinY)
       debug   = Debug.watch "World" world
-      --debug   = Debug.watch "collidedShots" collidedShots
-      --debug2  = Debug.watch "collidedShips" collidedShips
   in  { world | player  <- player
               , enemies <- enemies
               , shots   <- updatedShots
