@@ -79,6 +79,30 @@ notHitWith shots ship =
       shotRects = List.map (\s -> {center = s.pos, size = shotSize}) shots
   in  not (shipHit shotRects ship)
 
+-- get tuple of given Ship, and the Shots that hit it (often an empty list)
+hitTuple : List (Shot, Rectangle) -> (Ship, Rectangle) -> (Ship, List Shot)
+hitTuple shotRectTuples shipRectTuple =
+  let (ship, shipR) = shipRectTuple
+      hits = shotRectTuples
+               |> List.map ( \(shot, shotR) ->
+                            { hit=overlap shotR shipR
+                            , shot=shot } )
+               |> List.filter .hit
+      shots = List.map .shot hits
+  in  (ship, shots)
+
+-- get list of Ships that have collided, and the Shots they collided with
+findCollisions : List Shot -> List Ship -> List (Ship, List Shot)
+findCollisions shots ships =
+  let shotRectTuples =
+        List.map (\s -> (s, {center=s.pos, size=shotSize})) shots
+      shipRectTuples =
+        List.map (\s -> (s, {center=s.pos, size=s.size})) ships
+  in  shipRectTuples
+        |> List.map (hitTuple shotRectTuples)
+        |> List.filter (\(ship, shots) -> List.length shots > 0)
+
+
 updateEnemies : Float -> List Ship -> List Ship
 updateEnemies dt enemies =
   List.map (Ship.applyPhysics dt) enemies
@@ -101,12 +125,16 @@ update : (Float, Keys) -> World -> World
 update (dt, keys) world =
   let dt'     = dt / 1000
       player  = updatePlayer (dt', keys) world.player
+      collisions = findCollisions world.shots world.enemies
+      collidedShips = List.map (\(s,_) -> s) collisions
+      collidedShots = List.concatMap (\(_, shots) -> shots) collisions
       enemies = world.enemies
-                  |> updateEnemies dt'
+                  |> List.filter (\s -> not (List.member s collidedShips))
                   |> List.filter (\s -> s.pos.y > groundLevel)
-                  |> List.filter (notHitWith world.shots)
+                  |> updateEnemies dt'
       shots   = world.shots
                   |> playerShoot player world.untilNextShot
+                  |> List.filter (\s -> not (List.member s collidedShots))
       untilNextShot =
         if List.length shots == List.length world.shots
           then
@@ -121,6 +149,8 @@ update (dt, keys) world =
                             shot.pos.y < shotMaxY &&
                             shot.pos.y > shotMinY)
       debug   = Debug.watch "World" world
+      --debug   = Debug.watch "collidedShots" collidedShots
+      --debug2  = Debug.watch "collidedShips" collidedShips
   in  { world | player  <- player
               , enemies <- enemies
               , shots   <- updatedShots
