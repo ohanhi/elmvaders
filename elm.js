@@ -3254,6 +3254,57 @@ Elm.Main.make = function (_elm) {
       ,_1: r * -0.5},
       form);
    });
+   var renderShip = F2(function (r,
+   ship) {
+      return function () {
+         var dir = _U.cmp(ship.vel.y,
+         0) < 0 ? -1 : 1;
+         var $ = {ctor: "_Tuple2"
+                 ,_0: ship.size.x
+                 ,_1: ship.size.y},
+         w = $._0,
+         h = $._1;
+         var bodyH = h / 3;
+         var dotR = bodyH / 2;
+         var $ = {ctor: "_Tuple2"
+                 ,_0: ship.pos.x
+                 ,_1: ship.pos.y},
+         x = $._0,
+         y = $._1;
+         var fillAndMove = F2(function (_v0,
+         f) {
+            return function () {
+               switch (_v0.ctor)
+               {case "_Tuple2":
+                  return $Graphics$Collage.move({ctor: "_Tuple2"
+                                                ,_0: (x + _v0._0) * r
+                                                ,_1: (y + _v0._1) * r})(fromBottom(r)($Graphics$Collage.filled(A3($Color.rgb,
+                    128,
+                    128,
+                    128))(f)));}
+               _U.badCase($moduleName,
+               "between lines 149 and 152");
+            }();
+         });
+         var body = fillAndMove({ctor: "_Tuple2"
+                                ,_0: 0
+                                ,_1: dir * (0 - dotR)})(A2($Graphics$Collage.rect,
+         r * w,
+         r * bodyH));
+         var dots = _L.fromArray([fillAndMove({ctor: "_Tuple2"
+                                              ,_0: 0
+                                              ,_1: 0})($Graphics$Collage.circle(r * dotR))
+                                 ,fillAndMove({ctor: "_Tuple2"
+                                              ,_0: (0 - w) / 2
+                                              ,_1: dir * (0 - dotR)})($Graphics$Collage.circle(r * dotR))
+                                 ,fillAndMove({ctor: "_Tuple2"
+                                              ,_0: w / 2
+                                              ,_1: dir * (0 - dotR)})($Graphics$Collage.circle(r * dotR))]);
+         return A2($List._op["::"],
+         body,
+         dots);
+      }();
+   });
    var updateShots = F2(function (dt,
    shots) {
       return A2($List.map,
@@ -3266,9 +3317,6 @@ Elm.Main.make = function (_elm) {
       $Ship.applyPhysics(dt),
       enemies);
    });
-   var initPlayer = _U.replace([["size"
-                                ,{_: {},x: 5.0e-2,y: 5.0e-2}]],
-   $Ship.initShip);
    var World = F4(function (a,
    b,
    c,
@@ -3279,43 +3327,39 @@ Elm.Main.make = function (_elm) {
              ,shots: c
              ,untilNextShot: d};
    });
+   var playerHeight = 3.0e-2;
+   var groundLevel = 3.0e-2;
+   var initPlayer = _U.replace([["pos"
+                                ,{_: {}
+                                 ,x: 0
+                                 ,y: groundLevel + playerHeight / 2}]
+                               ,["size"
+                                ,{_: {}
+                                 ,x: 7.0e-2
+                                 ,y: playerHeight}]],
+   $Ship.initShip);
    var translucentGray = A4($Color.rgba,
    0,
    0,
    0,
    0.5);
-   var renderEnemy = F2(function (r,
-   enemy) {
-      return function () {
-         var $ = {ctor: "_Tuple2"
-                 ,_0: enemy.pos.x
-                 ,_1: enemy.pos.y},
-         x = $._0,
-         y = $._1;
-         return $Graphics$Collage.move({ctor: "_Tuple2"
-                                       ,_0: x * r
-                                       ,_1: y * r})(fromBottom(r)($Graphics$Collage.filled(translucentGray)(A2($Graphics$Collage.rect,
-         r * enemy.size.x,
-         r * enemy.size.y))));
-      }();
-   });
    var shootDelay = 500;
    var playerMoveRatio = 0.3;
-   var updatePlayer = F2(function (_v0,
+   var updatePlayer = F2(function (_v4,
    ship) {
       return function () {
-         switch (_v0.ctor)
+         switch (_v4.ctor)
          {case "_Tuple2":
             return function () {
-                 var isShooting = _U.cmp(_v0._1.y,
+                 var isShooting = _U.cmp(_v4._1.y,
                  0) > 0;
                  var newVel = {_: {}
-                              ,x: $Basics.toFloat(_v0._1.x) * playerMoveRatio
+                              ,x: $Basics.toFloat(_v4._1.x) * playerMoveRatio
                               ,y: 0};
-                 return $Ship.updateVel(newVel)($Ship.updateShooting(isShooting)($Ship.applyPhysics(_v0._0)(ship)));
+                 return $Ship.updateVel(newVel)($Ship.updateShooting(isShooting)($Ship.applyPhysics(_v4._0)(ship)));
               }();}
          _U.badCase($moduleName,
-         "between lines 63 and 68");
+         "between lines 66 and 71");
       }();
    });
    var moveRatio = 0.2;
@@ -3345,18 +3389,24 @@ Elm.Main.make = function (_elm) {
                    ,player: initPlayer
                    ,shots: _L.fromArray([])
                    ,untilNextShot: 0};
-   var maybeAddShot = F3(function (player,
+   var playerShoot = F3(function (s,
    untilNextShot,
    shots) {
-      return player.shooting && _U.cmp(untilNextShot,
-      0) < 1 ? A2($List._op["::"],
-      _U.replace([["pos",player.pos]
-                 ,["vel"
-                  ,{_: {}
-                   ,x: 0
-                   ,y: 2 * moveRatio}]],
-      $Shot.initShot),
-      shots) : shots;
+      return function () {
+         var sp = s.pos;
+         var position = _U.replace([["y"
+                                    ,sp.y + s.size.y / 2]],
+         sp);
+         return s.shooting && _U.cmp(untilNextShot,
+         0) < 1 ? A2($List._op["::"],
+         _U.replace([["pos",position]
+                    ,["vel"
+                     ,{_: {}
+                      ,x: 0
+                      ,y: 2 * moveRatio}]],
+         $Shot.initShot),
+         shots) : shots;
+      }();
    });
    var shotMaxY = 1;
    var shotSize = {_: {}
@@ -3398,74 +3448,80 @@ Elm.Main.make = function (_elm) {
          r * shotSize.y))));
       }();
    });
-   var render = F2(function (_v4,
-   world) {
-      return function () {
-         switch (_v4.ctor)
-         {case "_Tuple2":
-            return function () {
-                 var $ = {ctor: "_Tuple2"
-                         ,_0: $Basics.toFloat(_v4._0)
-                         ,_1: $Basics.toFloat(_v4._1)},
-                 w$ = $._0,
-                 h$ = $._1;
-                 var r = h$;
-                 var player = $Graphics$Collage.move({ctor: "_Tuple2"
-                                                     ,_0: world.player.pos.x * r
-                                                     ,_1: world.player.pos.y * r})(fromBottom(r)($Graphics$Collage.filled(translucentGray)(A2($Graphics$Collage.ngon,
-                 4,
-                 r * world.player.size.x))));
-                 var shots = A2($List.map,
-                 renderShot(r),
-                 world.shots);
-                 var enemies = A2($List.map,
-                 renderEnemy(r),
-                 world.enemies);
-                 var bg = $Graphics$Collage.filled(A3($Color.rgb,
-                 230,
-                 240,
-                 255))(A2($Graphics$Collage.rect,
-                 w$,
-                 h$));
-                 var allForms = A2($List._op["::"],
-                 bg,
-                 A2($List._op["::"],
-                 player,
-                 A2($Basics._op["++"],
-                 shots,
-                 enemies)));
-                 return A3($Graphics$Collage.collage,
-                 _v4._0,
-                 _v4._1,
-                 allForms);
-              }();}
-         _U.badCase($moduleName,
-         "between lines 148 and 165");
-      }();
-   });
-   var shotMinY = -1;
-   var update = F2(function (_v8,
+   var render = F2(function (_v8,
    world) {
       return function () {
          switch (_v8.ctor)
          {case "_Tuple2":
             return function () {
+                 var $ = {ctor: "_Tuple2"
+                         ,_0: $Basics.toFloat(_v8._0)
+                         ,_1: $Basics.toFloat(_v8._1)},
+                 w$ = $._0,
+                 h$ = $._1;
+                 var r = h$;
+                 var player = A2(renderShip,
+                 r,
+                 world.player);
+                 var shots = A2($List.map,
+                 renderShot(r),
+                 world.shots);
+                 var enemies = A2($List.concatMap,
+                 renderShip(r),
+                 world.enemies);
+                 var bg = $Graphics$Collage.filled($Color.lightGray)(A2($Graphics$Collage.rect,
+                 w$,
+                 h$));
+                 var ground = fromBottom(r)($Graphics$Collage.filled(A3($Color.rgb,
+                 70,
+                 40,
+                 80))(A2($Graphics$Collage.rect,
+                 w$,
+                 r * groundLevel * 2)));
+                 var allForms = A2($List._op["::"],
+                 bg,
+                 A2($List._op["::"],
+                 ground,
+                 A2($Basics._op["++"],
+                 player,
+                 A2($Basics._op["++"],
+                 shots,
+                 enemies))));
+                 return A3($Graphics$Collage.collage,
+                 _v8._0,
+                 _v8._1,
+                 allForms);
+              }();}
+         _U.badCase($moduleName,
+         "between lines 166 and 182");
+      }();
+   });
+   var shotMinY = -1;
+   var update = F2(function (_v12,
+   world) {
+      return function () {
+         switch (_v12.ctor)
+         {case "_Tuple2":
+            return function () {
                  var debug = A2($Debug.watch,
                  "World",
                  world);
-                 var dt$ = _v8._0 / 1000;
+                 var dt$ = _v12._0 / 1000;
                  var player = A2(updatePlayer,
                  {ctor: "_Tuple2"
                  ,_0: dt$
-                 ,_1: _v8._1},
+                 ,_1: _v12._1},
                  world.player);
-                 var shots = A2(maybeAddShot,
+                 var shots = A2(playerShoot,
                  player,
                  world.untilNextShot)(world.shots);
                  var untilNextShot = _U.eq($List.length(shots),
                  $List.length(world.shots)) ? _U.cmp(world.untilNextShot,
-                 0) > 0 ? world.untilNextShot - _v8._0 : 0 : shootDelay;
-                 var enemies = $List.filter(notHitWith(world.shots))(updateEnemies(dt$)(world.enemies));
+                 0) > 0 ? world.untilNextShot - _v12._0 : 0 : shootDelay;
+                 var enemies = $List.filter(notHitWith(world.shots))($List.filter(function (s) {
+                    return _U.cmp(s.pos.y,
+                    groundLevel) > 0;
+                 })(updateEnemies(dt$)(world.enemies)));
                  var updatedShots = $List.filter(function (shot) {
                     return _U.cmp(shot.pos.y,
                     shotMaxY) < 0 && _U.cmp(shot.pos.y,
@@ -3480,7 +3536,7 @@ Elm.Main.make = function (_elm) {
                  world);
               }();}
          _U.badCase($moduleName,
-         "between lines 97 and 121");
+         "between lines 102 and 127");
       }();
    });
    var main = A3($Signal.map2,
@@ -3498,6 +3554,8 @@ Elm.Main.make = function (_elm) {
                       ,playerMoveRatio: playerMoveRatio
                       ,shootDelay: shootDelay
                       ,translucentGray: translucentGray
+                      ,groundLevel: groundLevel
+                      ,playerHeight: playerHeight
                       ,World: World
                       ,initPlayer: initPlayer
                       ,initWorld: initWorld
@@ -3505,12 +3563,12 @@ Elm.Main.make = function (_elm) {
                       ,updatePlayer: updatePlayer
                       ,notHitWith: notHitWith
                       ,updateEnemies: updateEnemies
-                      ,maybeAddShot: maybeAddShot
+                      ,playerShoot: playerShoot
                       ,updateShots: updateShots
                       ,update: update
                       ,fromBottom: fromBottom
                       ,renderShot: renderShot
-                      ,renderEnemy: renderEnemy
+                      ,renderShip: renderShip
                       ,render: render
                       ,inputSignal: inputSignal
                       ,main: main};
