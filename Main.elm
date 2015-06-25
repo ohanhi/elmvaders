@@ -22,6 +22,8 @@ moveRatio = 0.2
 playerMoveRatio = 0.3
 shootDelay = 500 -- ms
 translucentGray = rgba 0 0 0 0.5
+groundLevel = 0.03
+playerHeight = 0.03
 
 -- MODEL
 
@@ -35,7 +37,8 @@ type alias World =
 -- initial values for records
 
 initPlayer =
-  { initShip | size <- { x = 0.05, y = 0.05 } }
+  { initShip | pos  <- { x = 0, y = groundLevel + playerHeight/2 }
+             , size <- { x = 0.07, y = playerHeight } }
 
 initWorld : World
 initWorld =
@@ -80,12 +83,14 @@ updateEnemies : Float -> List Ship -> List Ship
 updateEnemies dt enemies =
   List.map (Ship.applyPhysics dt) enemies
 
-maybeAddShot : Ship -> Float -> List Shot -> List Shot
-maybeAddShot player untilNextShot shots =
-  if player.shooting && untilNextShot <= 0
-    then { initShot | pos <- player.pos
-                    , vel <- { x = 0, y = 2 * moveRatio } } :: shots
-    else shots
+playerShoot : Ship -> Float -> List Shot -> List Shot
+playerShoot s untilNextShot shots =
+  let sp = s.pos
+      position = { sp | y <- sp.y + s.size.y / 2 }
+  in if s.shooting && untilNextShot <= 0
+        then { initShot | pos <- position
+                        , vel <- { x = 0, y = 2 * moveRatio } } :: shots
+        else shots
 
 updateShots : Float -> List Shot -> List Shot
 updateShots dt shots =
@@ -98,9 +103,10 @@ update (dt, keys) world =
       player  = updatePlayer (dt', keys) world.player
       enemies = world.enemies
                   |> updateEnemies dt'
+                  |> List.filter (\s -> s.pos.y > groundLevel)
                   |> List.filter (notHitWith world.shots)
       shots   = world.shots
-                  |> maybeAddShot player world.untilNextShot
+                  |> playerShoot player world.untilNextShot
       untilNextShot =
         if List.length shots == List.length world.shots
           then
@@ -135,13 +141,25 @@ renderShot r shot =
         |> fromBottom r
         |> move (x * r, y * r)
 
-renderEnemy : Float -> Ship -> Form
-renderEnemy r enemy =
-  let (x, y) = (enemy.pos.x, enemy.pos.y)
-  in  rect (r * enemy.size.x) (r * enemy.size.y)
-        |> filled translucentGray
-        |> fromBottom r
-        |> move (x * r, y * r)
+renderShip : Float -> Ship -> List Form
+renderShip r ship =
+  let (x, y) = (ship.pos.x, ship.pos.y)
+      (w, h) = (ship.size.x, ship.size.y)
+      dir    = if ship.vel.y < 0 then -1 else 1
+      fillAndMove = \(xo, yo) f -> f
+          |> filled (rgb 128 128 128)
+          |> fromBottom r
+          |> move ((x + xo) * r, (y + yo) * r)
+      bodyH = h / 3
+      dotR  = bodyH / 2
+      body =
+        rect (r * w) (r * bodyH) |> fillAndMove (0, dir * -dotR)
+      dots =
+        [ circle (r * dotR) |> fillAndMove (0, 0)
+        , circle (r * dotR) |> fillAndMove (-w/2, dir * -dotR)
+        , circle (r * dotR) |> fillAndMove (w/2, dir * -dotR)
+        ]
+  in  body :: dots
 
 render : (Int, Int) -> World -> Element
 render (w, h) world =
@@ -149,19 +167,18 @@ render (w, h) world =
       r = h'
       bg =
         rect w' h'
-          |> filled (rgb 230 240 255)
-      player =
-        ngon 4 (r * world.player.size.x)
-          |> filled translucentGray
+          |> filled lightGray
+      ground =
+        rect w' (r * groundLevel * 2)
+          |> filled (rgb 70 40 80)
           |> fromBottom r
-          |> move (world.player.pos.x * r,
-                   world.player.pos.y * r)
+      player = renderShip r world.player
       shots =
         List.map (renderShot r) world.shots
       enemies =
-        List.map (renderEnemy r) world.enemies
+        List.concatMap (renderShip r) world.enemies
       allForms =
-        bg :: player :: shots ++ enemies
+        bg :: ground :: player ++ shots ++ enemies
   in  collage w h allForms
 
 -- SIGNALS
