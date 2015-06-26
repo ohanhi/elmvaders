@@ -58,7 +58,7 @@ initEnemies : List Ship
 initEnemies =
   let range = Array.toList (Array.initialize 10 identity)
       createEnemy = (\n ->
-        { initShip | pos <- { x = -0.5 + toFloat n / 10, y = 1 }
+        { initShip | pos <- { x = -0.5 + toFloat n / 10, y = 1.025 }
                    , vel <- { x = 0, y = -0.1 * moveRatio }
                    , size <- { x = 0.05, y = 0.025 }
                    })
@@ -117,8 +117,8 @@ updateShots dt shots =
   List.map (Shot.applyPhysics dt) shots
 
 -- take dt, `Keys` and `World`, return next state
-update : (Float, Keys) -> World -> World
-update (dt, keys) world =
+updatePlay : (Float, Keys) -> World -> World
+updatePlay (dt, keys) world =
   let dt'     = dt / 1000
       player  = updatePlayer (dt', keys) world.player
       collisions = findCollisions world.shots world.enemies
@@ -150,6 +150,19 @@ update (dt, keys) world =
               , shots   <- updatedShots
               , untilNextShot <- untilNextShot }
 
+-- if any key is pressed, go to Playing state
+updateWait : Keys -> World -> World
+updateWait keys world =
+  if keys == { x=0, y=0 }
+    then world
+    else { world | state <- Playing }
+
+update : (Float, Keys) -> World -> World
+update (dt, keys) world =
+  case world.state of
+    Splash   -> updateWait keys world
+    Playing  -> updatePlay (dt, keys) world
+    GameOver -> updateWait keys world
 
 -- RENDER
 
@@ -218,7 +231,8 @@ inputSignal =
       tuples = Signal.map2 (,) delta Keyboard.arrows
   in  Signal.sampleOn delta tuples
 
+world : Signal World
+world = Signal.foldp update initWorld inputSignal
+
 main : Signal Element
-main = Signal.map2 render
-           Window.dimensions
-          (Signal.foldp update initWorld inputSignal)
+main = Signal.map2 render Window.dimensions world
