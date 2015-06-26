@@ -9,6 +9,7 @@ type alias Ship =
   , size : Vec2
   , vel  : Vec2
   , shooting : Bool
+  , value : Int
   }
 
 initShip : Ship
@@ -17,6 +18,7 @@ initShip =
   , size = zeroVec2
   , vel  = zeroVec2
   , shooting = False
+  , value = 0
   }
 
 applyPhysics : Float -> Ship -> Ship

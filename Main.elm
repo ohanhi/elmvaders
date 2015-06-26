@@ -25,6 +25,8 @@ shootDelay = 500 -- ms
 translucentGray = rgba 0 0 0 0.5
 groundLevel = 0.03
 playerHeight = 0.03
+initDifficulty = 10
+difficultyStep = 10
 
 -- MODEL
 
@@ -37,6 +39,7 @@ type alias World =
   , untilNextShot : Float
   , score   : Int
   , state   : GameState
+  , difficulty : Int
   }
 
 -- initial values for records
@@ -48,20 +51,22 @@ initPlayer =
 initWorld : World
 initWorld =
   { player = initPlayer
-  , enemies = initEnemies
+  , enemies = initEnemies initDifficulty
+  , difficulty = initDifficulty
   , shots = []
   , untilNextShot = 0
   , score = 0
   , state = Splash
   }
 
-initEnemies : List Ship
-initEnemies =
+initEnemies : Int -> List Ship
+initEnemies value =
   let range = Array.toList (Array.initialize 10 identity)
       createEnemy = (\n ->
         { initShip | pos <- { x = -0.5 + toFloat n / 10, y = 1.025 }
                    , vel <- { x = 0, y = -0.1 * moveRatio }
                    , size <- { x = 0.05, y = 0.025 }
+                   , value <- value
                    })
   in  List.map createEnemy range
 
@@ -123,40 +128,42 @@ updatePlay (dt, keys) world =
   let dt'     = dt / 1000
       player  = updatePlayer (dt', keys) world.player
       collisions = findCollisions world.shots world.enemies
-      collidedShips = List.map (\(s,_) -> s) collisions
-      collidedShots = List.concatMap (\(_, shots) -> shots) collisions
+      hitShips = List.map fst collisions
+      hitShots = List.concatMap snd collisions
       enemies = world.enemies
-                  |> List.filter (\s -> not (List.member s collidedShips))
-                  |> List.filter (\s -> s.pos.y > groundLevel)
+                  |> List.filter (\s -> not (List.member s hitShips))
                   |> updateEnemies dt'
       shots   = world.shots
                   |> playerShoot player world.untilNextShot
-                  |> List.filter (\s -> not (List.member s collidedShots))
+                  |> List.filter (\s -> not (List.member s hitShots))
       untilNextShot =
         if List.length shots == List.length world.shots
-          then
-            if world.untilNextShot > 0
-              then world.untilNextShot - dt
-              else 0
+          then if world.untilNextShot > 0
+            then world.untilNextShot - dt
+            else 0
           else shootDelay
       updatedShots =
         shots
           |> updateShots dt'
-          |> List.filter (\shot ->
-                            shot.pos.y < shotMaxY &&
+          |> List.filter (\shot -> shot.pos.y < shotMaxY &&
                             shot.pos.y > shotMinY)
+      score   = List.foldl (\s m -> m + s.value) world.score hitShips
+      dead    = List.any (\s -> s.pos.y <= groundLevel) world.enemies
+      state   = if dead then GameOver else Playing
       debug   = Debug.watch "World" world
   in  { world | player  <- player
               , enemies <- enemies
               , shots   <- updatedShots
-              , untilNextShot <- untilNextShot }
+              , untilNextShot <- untilNextShot
+              , state   <- state
+              , score   <- score }
 
 -- if any key is pressed, go to Playing state
 updateWait : Keys -> World -> World
 updateWait keys world =
   if keys == { x=0, y=0 }
     then world
-    else { world | state <- Playing }
+    else { initWorld | state <- Playing }
 
 update : (Float, Keys) -> World -> World
 update (dt, keys) world =
@@ -230,7 +237,7 @@ splashText =
 
 gameoverText : Int -> Form
 gameoverText score =
-  toString score ++ "\nArrow keys to restart."
+  "Score: " ++ toString score ++ "\nArrow keys to restart."
     |> formatText
 
 render : (Int, Int) -> World -> Element

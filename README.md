@@ -4,7 +4,7 @@ Simple Space Invaders clone written in Elm. [Try it online!](https://ohanhi.gith
 Elmvaders is *not a game* yet.
 The minimum set of requirements before it is a game:
 - [x] GameState = Splash | Playing | GameOver
-- [ ] Gain points by destroying enemies
+- [x] Gain points by destroying enemies
 - [ ] All enemies down -> Faster level
 - [x] Show points when game over, restart
 
