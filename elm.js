@@ -3226,26 +3226,55 @@ Elm.Main.make = function (_elm) {
    $Graphics$Element = Elm.Graphics.Element.make(_elm),
    $Keyboard = Elm.Keyboard.make(_elm),
    $List = Elm.List.make(_elm),
+   $Mouse = Elm.Mouse.make(_elm),
    $Ship = Elm.Ship.make(_elm),
    $Shot = Elm.Shot.make(_elm),
    $Signal = Elm.Signal.make(_elm),
+   $Text = Elm.Text.make(_elm),
    $Time = Elm.Time.make(_elm),
    $Util = Elm.Util.make(_elm),
    $Window = Elm.Window.make(_elm);
    var inputSignal = function () {
       var delta = $Time.fps(30);
-      var tuples = A3($Signal.map2,
-      F2(function (v0,v1) {
-         return {ctor: "_Tuple2"
+      var tuples = A4($Signal.map3,
+      F3(function (v0,v1,v2) {
+         return {ctor: "_Tuple3"
                 ,_0: v0
-                ,_1: v1};
+                ,_1: v1
+                ,_2: v2};
       }),
       delta,
-      $Keyboard.arrows);
+      $Keyboard.arrows,
+      $Mouse.isDown);
       return A2($Signal.sampleOn,
       delta,
       tuples);
    }();
+   var formatText = function (s) {
+      return $Graphics$Collage.toForm($Graphics$Element.centered($Text.height(20)($Text.color($Color.black)($Text.fromString(s)))));
+   };
+   var splashText = formatText("Click to start.\nArrow keys to play.");
+   var gameoverText = function (score) {
+      return formatText(A2($Basics._op["++"],
+      "Score: ",
+      A2($Basics._op["++"],
+      $Basics.toString(score),
+      "\nClick to restart.")));
+   };
+   var scoreText = F2(function (score,
+   _v0) {
+      return function () {
+         switch (_v0.ctor)
+         {case "_Tuple2":
+            return $Graphics$Collage.move({ctor: "_Tuple2"
+                                          ,_0: 80 - _v0._0 / 2
+                                          ,_1: _v0._1 / 2 - 20})(formatText(A2($Basics._op["++"],
+              "Score: ",
+              $Basics.toString(score))));}
+         _U.badCase($moduleName,
+         "between lines 261 and 263");
+      }();
+   });
    var fromBottom = F2(function (r,
    form) {
       return A2($Graphics$Collage.move,
@@ -3271,19 +3300,19 @@ Elm.Main.make = function (_elm) {
                  ,_1: ship.pos.y},
          x = $._0,
          y = $._1;
-         var fillAndMove = F2(function (_v0,
+         var fillAndMove = F2(function (_v4,
          f) {
             return function () {
-               switch (_v0.ctor)
+               switch (_v4.ctor)
                {case "_Tuple2":
                   return $Graphics$Collage.move({ctor: "_Tuple2"
-                                                ,_0: (x + _v0._0) * r
-                                                ,_1: (y + _v0._1) * r})(fromBottom(r)($Graphics$Collage.filled(A3($Color.rgb,
+                                                ,_0: (x + _v4._0) * r
+                                                ,_1: (y + _v4._1) * r})(fromBottom(r)($Graphics$Collage.filled(A3($Color.rgb,
                     128,
                     128,
                     128))(f)));}
                _U.badCase($moduleName,
-               "between lines 179 and 182");
+               "between lines 210 and 213");
             }();
          });
          var body = fillAndMove({ctor: "_Tuple2"
@@ -3325,16 +3354,16 @@ Elm.Main.make = function (_elm) {
          shipR = $._1;
          var hits = $List.filter(function (_) {
             return _.hit;
-         })($List.map(function (_v4) {
+         })($List.map(function (_v8) {
             return function () {
-               switch (_v4.ctor)
+               switch (_v8.ctor)
                {case "_Tuple2": return {_: {}
                                        ,hit: A2($Util.overlap,
-                                       _v4._1,
+                                       _v8._1,
                                        shipR)
-                                       ,shot: _v4._0};}
+                                       ,shot: _v8._0};}
                _U.badCase($moduleName,
-               "between lines 88 and 89");
+               "between lines 97 and 98");
             }();
          })(shotRectTuples));
          var shots = A2($List.map,
@@ -3347,16 +3376,29 @@ Elm.Main.make = function (_elm) {
                 ,_1: shots};
       }();
    });
-   var World = F4(function (a,
+   var World = F8(function (a,
    b,
    c,
-   d) {
+   d,
+   e,
+   f,
+   g,
+   h) {
       return {_: {}
+             ,difficulty: h
              ,enemies: b
              ,player: a
+             ,score: f
              ,shots: c
-             ,untilNextShot: d};
+             ,state: g
+             ,untilNextShot: d
+             ,untilNextWave: e};
    });
+   var GameOver = {ctor: "GameOver"};
+   var Playing = {ctor: "Playing"};
+   var Splash = {ctor: "Splash"};
+   var difficultyStep = 10;
+   var initDifficulty = 10;
    var playerHeight = 3.0e-2;
    var groundLevel = 3.0e-2;
    var initPlayer = _U.replace([["pos"
@@ -3373,52 +3415,68 @@ Elm.Main.make = function (_elm) {
    0,
    0,
    0.5);
+   var shipsPerWave = 8;
+   var waveDelay = 10000;
    var shootDelay = 500;
    var playerMoveRatio = 0.3;
-   var updatePlayer = F2(function (_v8,
+   var updatePlayer = F2(function (_v12,
    ship) {
       return function () {
-         switch (_v8.ctor)
+         switch (_v12.ctor)
          {case "_Tuple2":
             return function () {
-                 var isShooting = _U.cmp(_v8._1.y,
+                 var isShooting = _U.cmp(_v12._1.y,
                  0) > 0;
                  var newVel = {_: {}
-                              ,x: $Basics.toFloat(_v8._1.x) * playerMoveRatio
+                              ,x: $Basics.toFloat(_v12._1.x) * playerMoveRatio
                               ,y: 0};
-                 return $Ship.updateVel(newVel)($Ship.updateShooting(isShooting)($Ship.applyPhysics(_v8._0)(ship)));
+                 return $Ship.updateVel(newVel)($Ship.updateShooting(isShooting)($Ship.applyPhysics(_v12._0)(ship)));
               }();}
          _U.badCase($moduleName,
-         "between lines 66 and 71");
+         "between lines 84 and 89");
       }();
    });
-   var moveRatio = 0.2;
-   var initEnemies = function () {
-      var createEnemy = function (n) {
-         return _U.replace([["pos"
-                            ,{_: {}
-                             ,x: -0.5 + $Basics.toFloat(n) / 10
-                             ,y: 1}]
-                           ,["vel"
-                            ,{_: {}
-                             ,x: 0
-                             ,y: -0.1 * moveRatio}]
-                           ,["size"
-                            ,{_: {},x: 5.0e-2,y: 2.5e-2}]],
-         $Ship.initShip);
-      };
-      var range = $Array.toList(A2($Array.initialize,
-      10,
-      $Basics.identity));
-      return A2($List.map,
-      createEnemy,
-      range);
-   }();
+   var enemyMoveRatio = 2.0e-2;
+   var initEnemies = function (value) {
+      return function () {
+         var createEnemy = function (n) {
+            return _U.replace([["pos"
+                               ,{_: {}
+                                ,x: -0.5 + $Basics.toFloat(n) / shipsPerWave
+                                ,y: 1.025}]
+                              ,["vel"
+                               ,{_: {}
+                                ,x: 0
+                                ,y: 0 - enemyMoveRatio * (1 + $Basics.toFloat(value) / 100)}]
+                              ,["size"
+                               ,{_: {},x: 5.0e-2,y: 2.5e-2}]
+                              ,["value",value]],
+            $Ship.initShip);
+         };
+         var range = $Array.toList(A2($Array.initialize,
+         shipsPerWave,
+         $Basics.identity));
+         return A2($List.map,
+         createEnemy,
+         range);
+      }();
+   };
    var initWorld = {_: {}
-                   ,enemies: initEnemies
+                   ,difficulty: initDifficulty
+                   ,enemies: initEnemies(initDifficulty)
                    ,player: initPlayer
+                   ,score: 0
                    ,shots: _L.fromArray([])
-                   ,untilNextShot: 0};
+                   ,state: Splash
+                   ,untilNextShot: 0
+                   ,untilNextWave: 0};
+   var updateWait = F2(function (mouseDown,
+   world) {
+      return $Basics.not(mouseDown) ? world : _U.replace([["state"
+                                                          ,Playing]],
+      initWorld);
+   });
+   var shotMoveRatio = 0.2;
    var playerShoot = F3(function (s,
    untilNextShot,
    shots) {
@@ -3433,7 +3491,7 @@ Elm.Main.make = function (_elm) {
                     ,["vel"
                      ,{_: {}
                       ,x: 0
-                      ,y: 2 * moveRatio}]],
+                      ,y: 2 * shotMoveRatio}]],
          $Shot.initShot),
          shots) : shots;
       }();
@@ -3442,27 +3500,6 @@ Elm.Main.make = function (_elm) {
    var shotSize = {_: {}
                   ,x: 5.0e-3
                   ,y: 2.0e-2};
-   var notHitWith = F2(function (shots,
-   ship) {
-      return function () {
-         var shotRects = A2($List.map,
-         function (s) {
-            return {_: {}
-                   ,center: s.pos
-                   ,size: shotSize};
-         },
-         shots);
-         var shipHit = F2(function (shotRects,
-         ship) {
-            return $List.any($Basics.identity)($List.map($Util.overlap({_: {}
-                                                                       ,center: ship.pos
-                                                                       ,size: ship.size}))(shotRects));
-         });
-         return $Basics.not(A2(shipHit,
-         shotRects,
-         ship));
-      }();
-   });
    var findCollisions = F2(function (shots,
    ships) {
       return function () {
@@ -3484,14 +3521,14 @@ Elm.Main.make = function (_elm) {
                         ,size: shotSize}};
          },
          shots);
-         return $List.filter(function (_v12) {
+         return $List.filter(function (_v16) {
             return function () {
-               switch (_v12.ctor)
+               switch (_v16.ctor)
                {case "_Tuple2":
-                  return _U.cmp($List.length(_v12._1),
+                  return _U.cmp($List.length(_v16._1),
                     0) > 0;}
                _U.badCase($moduleName,
-               "on line 103, column 43 to 64");
+               "on line 112, column 43 to 64");
             }();
          })($List.map(hitTuple(shotRectTuples))(shipRectTuples));
       }();
@@ -3511,18 +3548,22 @@ Elm.Main.make = function (_elm) {
          r * shotSize.y))));
       }();
    });
-   var render = F2(function (_v16,
+   var renderGame = F2(function (_v20,
    world) {
       return function () {
-         switch (_v16.ctor)
+         switch (_v20.ctor)
          {case "_Tuple2":
             return function () {
-                 var $ = {ctor: "_Tuple2"
-                         ,_0: $Basics.toFloat(_v16._0)
-                         ,_1: $Basics.toFloat(_v16._1)},
-                 w$ = $._0,
-                 h$ = $._1;
-                 var r = h$;
+                 var bg = $Graphics$Collage.filled($Color.lightGray)(A2($Graphics$Collage.rect,
+                 _v20._0,
+                 _v20._1));
+                 var r = _v20._1;
+                 var ground = fromBottom(r)($Graphics$Collage.filled(A3($Color.rgb,
+                 70,
+                 40,
+                 80))(A2($Graphics$Collage.rect,
+                 _v20._0,
+                 r * groundLevel * 2)));
                  var player = A2(renderShip,
                  r,
                  world.player);
@@ -3532,16 +3573,7 @@ Elm.Main.make = function (_elm) {
                  var enemies = A2($List.concatMap,
                  renderShip(r),
                  world.enemies);
-                 var bg = $Graphics$Collage.filled($Color.lightGray)(A2($Graphics$Collage.rect,
-                 w$,
-                 h$));
-                 var ground = fromBottom(r)($Graphics$Collage.filled(A3($Color.rgb,
-                 70,
-                 40,
-                 80))(A2($Graphics$Collage.rect,
-                 w$,
-                 r * groundLevel * 2)));
-                 var allForms = A2($List._op["::"],
+                 return A2($List._op["::"],
                  bg,
                  A2($List._op["::"],
                  ground,
@@ -3550,20 +3582,66 @@ Elm.Main.make = function (_elm) {
                  A2($Basics._op["++"],
                  shots,
                  enemies))));
-                 return A3($Graphics$Collage.collage,
-                 _v16._0,
-                 _v16._1,
-                 allForms);
               }();}
          _U.badCase($moduleName,
-         "between lines 196 and 212");
+         "between lines 227 and 240");
+      }();
+   });
+   var render = F2(function (_v24,
+   world) {
+      return function () {
+         switch (_v24.ctor)
+         {case "_Tuple2":
+            return function () {
+                 var $ = {ctor: "_Tuple2"
+                         ,_0: $Basics.toFloat(_v24._0)
+                         ,_1: $Basics.toFloat(_v24._1)},
+                 w$ = $._0,
+                 h$ = $._1;
+                 var gameForms = A2(renderGame,
+                 {ctor: "_Tuple2",_0: w$,_1: h$},
+                 world);
+                 return function () {
+                    var _v28 = world.state;
+                    switch (_v28.ctor)
+                    {case "GameOver":
+                       return A3($Graphics$Collage.collage,
+                         _v24._0,
+                         _v24._1,
+                         A2($Basics._op["++"],
+                         gameForms,
+                         _L.fromArray([gameoverText(world.score)])));
+                       case "Playing":
+                       return A3($Graphics$Collage.collage,
+                         _v24._0,
+                         _v24._1,
+                         A2($Basics._op["++"],
+                         gameForms,
+                         _L.fromArray([A2(scoreText,
+                         world.score,
+                         {ctor: "_Tuple2"
+                         ,_0: w$
+                         ,_1: h$})])));
+                       case "Splash":
+                       return A3($Graphics$Collage.collage,
+                         _v24._0,
+                         _v24._1,
+                         A2($Basics._op["++"],
+                         gameForms,
+                         _L.fromArray([splashText])));}
+                    _U.badCase($moduleName,
+                    "between lines 269 and 272");
+                 }();
+              }();}
+         _U.badCase($moduleName,
+         "between lines 267 and 272");
       }();
    });
    var shotMinY = -1;
-   var update = F2(function (_v20,
+   var updatePlay = F2(function (_v29,
    world) {
       return function () {
-         switch (_v20.ctor)
+         switch (_v29.ctor)
          {case "_Tuple2":
             return function () {
                  var debug = A2($Debug.watch,
@@ -3572,52 +3650,59 @@ Elm.Main.make = function (_elm) {
                  var collisions = A2(findCollisions,
                  world.shots,
                  world.enemies);
-                 var collidedShips = A2($List.map,
-                 function (_v24) {
-                    return function () {
-                       switch (_v24.ctor)
-                       {case "_Tuple2":
-                          return _v24._0;}
-                       _U.badCase($moduleName,
-                       "on line 129, column 43 to 44");
-                    }();
-                 },
+                 var hitShips = A2($List.map,
+                 $Basics.fst,
                  collisions);
-                 var collidedShots = A2($List.concatMap,
-                 function (_v28) {
-                    return function () {
-                       switch (_v28.ctor)
-                       {case "_Tuple2":
-                          return _v28._1;}
-                       _U.badCase($moduleName,
-                       "on line 130, column 54 to 59");
-                    }();
-                 },
+                 var score = A3($List.foldl,
+                 F2(function (s,m) {
+                    return m + s.value;
+                 }),
+                 world.score,
+                 hitShips);
+                 var hitShots = A2($List.concatMap,
+                 $Basics.snd,
                  collisions);
-                 var dt$ = _v20._0 / 1000;
+                 var dead = A2($List.any,
+                 function (s) {
+                    return _U.cmp(s.pos.y,
+                    groundLevel) < 1;
+                 },
+                 world.enemies);
+                 var state = dead ? GameOver : Playing;
+                 var dt$ = _v29._0 / 1000;
                  var player = A2(updatePlayer,
                  {ctor: "_Tuple2"
                  ,_0: dt$
-                 ,_1: _v20._1},
+                 ,_1: _v29._1},
                  world.player);
                  var shots = $List.filter(function (s) {
                     return $Basics.not(A2($List.member,
                     s,
-                    collidedShots));
+                    hitShots));
                  })(A2(playerShoot,
                  player,
                  world.untilNextShot)(world.shots));
                  var untilNextShot = _U.eq($List.length(shots),
                  $List.length(world.shots)) ? _U.cmp(world.untilNextShot,
-                 0) > 0 ? world.untilNextShot - _v20._0 : 0 : shootDelay;
+                 0) > 0 ? world.untilNextShot - _v29._0 : 0 : shootDelay;
                  var enemies = updateEnemies(dt$)($List.filter(function (s) {
-                    return _U.cmp(s.pos.y,
-                    groundLevel) > 0;
-                 })($List.filter(function (s) {
                     return $Basics.not(A2($List.member,
                     s,
-                    collidedShips));
-                 })(world.enemies)));
+                    hitShips));
+                 })(world.enemies));
+                 var $ = _U.cmp(world.untilNextWave,
+                 0) > 0 ? {ctor: "_Tuple3"
+                          ,_0: enemies
+                          ,_1: world.untilNextWave - _v29._0
+                          ,_2: world.difficulty} : {ctor: "_Tuple3"
+                                                   ,_0: A2($Basics._op["++"],
+                                                   enemies,
+                                                   initEnemies(world.difficulty))
+                                                   ,_1: waveDelay
+                                                   ,_2: world.difficulty + difficultyStep},
+                 updatedEnemies = $._0,
+                 untilNextWave = $._1,
+                 difficulty = $._2;
                  var updatedShots = $List.filter(function (shot) {
                     return _U.cmp(shot.pos.y,
                     shotMaxY) < 0 && _U.cmp(shot.pos.y,
@@ -3625,50 +3710,98 @@ Elm.Main.make = function (_elm) {
                  })(updateShots(dt$)(shots));
                  return _U.replace([["player"
                                     ,player]
-                                   ,["enemies",enemies]
+                                   ,["enemies",updatedEnemies]
                                    ,["shots",updatedShots]
-                                   ,["untilNextShot"
-                                    ,untilNextShot]],
+                                   ,["untilNextShot",untilNextShot]
+                                   ,["untilNextWave",untilNextWave]
+                                   ,["difficulty",difficulty]
+                                   ,["state",state]
+                                   ,["score",score]],
                  world);
               }();}
          _U.badCase($moduleName,
-         "between lines 126 and 157");
+         "between lines 134 and 175");
       }();
    });
+   var update = F2(function (_v33,
+   world) {
+      return function () {
+         switch (_v33.ctor)
+         {case "_Tuple3":
+            return function () {
+                 var _v38 = world.state;
+                 switch (_v38.ctor)
+                 {case "GameOver":
+                    return A2(updateWait,
+                      _v33._2,
+                      world);
+                    case "Playing":
+                    return A2(updatePlay,
+                      {ctor: "_Tuple2"
+                      ,_0: _v33._0
+                      ,_1: _v33._1},
+                      world);
+                    case "Splash":
+                    return A2(updateWait,
+                      _v33._2,
+                      world);}
+                 _U.badCase($moduleName,
+                 "between lines 186 and 189");
+              }();}
+         _U.badCase($moduleName,
+         "between lines 186 and 189");
+      }();
+   });
+   var world = A3($Signal.foldp,
+   update,
+   initWorld,
+   inputSignal);
    var main = A3($Signal.map2,
    render,
    $Window.dimensions,
-   A3($Signal.foldp,
-   update,
-   initWorld,
-   inputSignal));
+   world);
    _elm.Main.values = {_op: _op
                       ,shotMinY: shotMinY
                       ,shotSize: shotSize
                       ,shotMaxY: shotMaxY
-                      ,moveRatio: moveRatio
+                      ,shotMoveRatio: shotMoveRatio
+                      ,enemyMoveRatio: enemyMoveRatio
                       ,playerMoveRatio: playerMoveRatio
                       ,shootDelay: shootDelay
+                      ,waveDelay: waveDelay
+                      ,shipsPerWave: shipsPerWave
                       ,translucentGray: translucentGray
                       ,groundLevel: groundLevel
                       ,playerHeight: playerHeight
+                      ,initDifficulty: initDifficulty
+                      ,difficultyStep: difficultyStep
+                      ,Splash: Splash
+                      ,Playing: Playing
+                      ,GameOver: GameOver
                       ,World: World
                       ,initPlayer: initPlayer
                       ,initWorld: initWorld
                       ,initEnemies: initEnemies
                       ,updatePlayer: updatePlayer
-                      ,notHitWith: notHitWith
                       ,hitTuple: hitTuple
                       ,findCollisions: findCollisions
                       ,updateEnemies: updateEnemies
                       ,playerShoot: playerShoot
                       ,updateShots: updateShots
+                      ,updatePlay: updatePlay
+                      ,updateWait: updateWait
                       ,update: update
                       ,fromBottom: fromBottom
                       ,renderShot: renderShot
                       ,renderShip: renderShip
+                      ,renderGame: renderGame
+                      ,formatText: formatText
+                      ,splashText: splashText
+                      ,gameoverText: gameoverText
+                      ,scoreText: scoreText
                       ,render: render
                       ,inputSignal: inputSignal
+                      ,world: world
                       ,main: main};
    return _elm.Main.values;
 };
@@ -3744,6 +3877,37 @@ Elm.Maybe.make = function (_elm) {
                        ,Just: Just
                        ,Nothing: Nothing};
    return _elm.Maybe.values;
+};
+Elm.Mouse = Elm.Mouse || {};
+Elm.Mouse.make = function (_elm) {
+   "use strict";
+   _elm.Mouse = _elm.Mouse || {};
+   if (_elm.Mouse.values)
+   return _elm.Mouse.values;
+   var _op = {},
+   _N = Elm.Native,
+   _U = _N.Utils.make(_elm),
+   _L = _N.List.make(_elm),
+   $moduleName = "Mouse",
+   $Basics = Elm.Basics.make(_elm),
+   $Native$Mouse = Elm.Native.Mouse.make(_elm),
+   $Signal = Elm.Signal.make(_elm);
+   var clicks = $Native$Mouse.clicks;
+   var isDown = $Native$Mouse.isDown;
+   var position = $Native$Mouse.position;
+   var x = A2($Signal.map,
+   $Basics.fst,
+   position);
+   var y = A2($Signal.map,
+   $Basics.snd,
+   position);
+   _elm.Mouse.values = {_op: _op
+                       ,position: position
+                       ,x: x
+                       ,y: y
+                       ,isDown: isDown
+                       ,clicks: clicks};
+   return _elm.Mouse.values;
 };
 Elm.Native.Array = {};
 Elm.Native.Array.make = function(localRuntime) {
@@ -6645,6 +6809,50 @@ Elm.Native.List.make = function(localRuntime) {
 	};
 	return localRuntime.Native.List.values = Elm.Native.List.values;
 
+};
+
+Elm.Native = Elm.Native || {};
+Elm.Native.Mouse = {};
+Elm.Native.Mouse.make = function(localRuntime) {
+
+	localRuntime.Native = localRuntime.Native || {};
+	localRuntime.Native.Mouse = localRuntime.Native.Mouse || {};
+	if (localRuntime.Native.Mouse.values)
+	{
+		return localRuntime.Native.Mouse.values;
+	}
+
+	var NS = Elm.Native.Signal.make(localRuntime);
+	var Utils = Elm.Native.Utils.make(localRuntime);
+
+	var position = NS.input('Mouse.position', Utils.Tuple2(0,0));
+
+	var isDown = NS.input('Mouse.isDown', false);
+
+	var clicks = NS.input('Mouse.clicks', Utils.Tuple0);
+
+	var node = localRuntime.isFullscreen()
+		? document
+		: localRuntime.node;
+
+	localRuntime.addListener([clicks.id], node, 'click', function click() {
+		localRuntime.notify(clicks.id, Utils.Tuple0);
+	});
+	localRuntime.addListener([isDown.id], node, 'mousedown', function down() {
+		localRuntime.notify(isDown.id, true);
+	});
+	localRuntime.addListener([isDown.id], node, 'mouseup', function up() {
+		localRuntime.notify(isDown.id, false);
+	});
+	localRuntime.addListener([position.id], node, 'mousemove', function move(e) {
+		localRuntime.notify(position.id, Utils.getXY(e));
+	});
+
+	return localRuntime.Native.Mouse.values = {
+		position: position,
+		isDown: isDown,
+		clicks: clicks
+	};
 };
 
 Elm.Native.Port = {};
@@ -9986,15 +10194,18 @@ Elm.Ship.make = function (_elm) {
                   ,pos: $Util.zeroVec2
                   ,shooting: false
                   ,size: $Util.zeroVec2
+                  ,value: 0
                   ,vel: $Util.zeroVec2};
-   var Ship = F4(function (a,
+   var Ship = F5(function (a,
    b,
    c,
-   d) {
+   d,
+   e) {
       return {_: {}
              ,pos: a
              ,shooting: d
              ,size: b
+             ,value: e
              ,vel: c};
    });
    _elm.Ship.values = {_op: _op
