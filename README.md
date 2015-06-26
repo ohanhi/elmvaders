@@ -6,7 +6,7 @@ The minimum set of requirements before it is a game:
 - [x] GameState = Splash | Playing | GameOver
 - [ ] Gain points by destroying enemies
 - [ ] All enemies down -> Faster level
-- [ ] Show points when game over, restart
+- [x] Show points when game over, restart
 
 This is mainly an exercise in functional reactive programming for me.
 You could view this as the end result of my introduction to the subject:

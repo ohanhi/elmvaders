@@ -8,6 +8,7 @@ import Keyboard
 import Window
 import Debug
 import Array
+import Text exposing (Text)
 
 import Util exposing (..)
 import Ship exposing (Ship, initShip)
@@ -215,14 +216,31 @@ renderGame (w', h') world =
         List.concatMap (renderShip r) world.enemies
   in  bg :: ground :: player ++ shots ++ enemies
 
+formatText : String -> Form
+formatText s =
+  Text.fromString s
+    |> Text.color black
+    |> Text.height 20
+    |> centered
+    |> toForm
+
+splashText : Form
+splashText =
+  formatText "Arrow keys to play."
+
+gameoverText : Int -> Form
+gameoverText score =
+  toString score ++ "\nArrow keys to restart."
+    |> formatText
+
 render : (Int, Int) -> World -> Element
 render (w, h) world =
   let (w', h') = (toFloat w, toFloat h)
       gameForms = renderGame (w', h') world
   in  case world.state of
-      Splash    -> collage w h gameForms
+      Splash    -> collage w h (gameForms ++ [splashText])
       Playing   -> collage w h gameForms
-      GameOver  -> collage w h gameForms
+      GameOver  -> collage w h (gameForms ++ [gameoverText world.score])
 
 -- SIGNALS
 inputSignal : Signal (Float, Keys)
