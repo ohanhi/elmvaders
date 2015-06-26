@@ -27,11 +27,15 @@ playerHeight = 0.03
 
 -- MODEL
 
+type GameState = Splash | Playing | GameOver
+
 type alias World =
   { player  : Ship
   , enemies : List Ship
   , shots   : List Shot
   , untilNextShot : Float
+  , score   : Int
+  , state   : GameState
   }
 
 -- initial values for records
@@ -46,6 +50,8 @@ initWorld =
   , enemies = initEnemies
   , shots = []
   , untilNextShot = 0
+  , score = 0
+  , state = Splash
   }
 
 initEnemies : List Ship
@@ -179,10 +185,9 @@ renderShip r ship =
         ]
   in  body :: dots
 
-render : (Int, Int) -> World -> Element
-render (w, h) world =
-  let (w', h') = (toFloat w, toFloat h)
-      r = h'
+renderGame : (Float, Float) -> World -> List Form
+renderGame (w', h') world =
+  let r = h'
       bg =
         rect w' h'
           |> filled lightGray
@@ -195,9 +200,16 @@ render (w, h) world =
         List.map (renderShot r) world.shots
       enemies =
         List.concatMap (renderShip r) world.enemies
-      allForms =
-        bg :: ground :: player ++ shots ++ enemies
-  in  collage w h allForms
+  in  bg :: ground :: player ++ shots ++ enemies
+
+render : (Int, Int) -> World -> Element
+render (w, h) world =
+  let (w', h') = (toFloat w, toFloat h)
+      gameForms = renderGame (w', h') world
+  in  case world.state of
+      Splash    -> collage w h gameForms
+      Playing   -> collage w h gameForms
+      GameOver  -> collage w h gameForms
 
 -- SIGNALS
 inputSignal : Signal (Float, Keys)
