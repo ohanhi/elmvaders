@@ -1,12 +1,8 @@
 # elmvaders
-Simple Space Invaders clone written in Elm. [Try it online!](https://ohanhi.github.io/elmvaders/)
+Simple Space Invaders -inspired game written in Elm. [Try it online!](https://ohanhi.github.io/elmvaders/)
 
-Elmvaders is *not a game* yet.
-The minimum set of requirements before it is a game:
-- [x] GameState = Splash | Playing | GameOver
-- [x] Gain points by destroying enemies
-- [ ] All enemies down -> Faster level
-- [x] Show points when game over, restart
+Elmvaders is an endless game. There are no levels or special goals.
+Just try to survive as long as possible and see how many points you can score.
 
 This is mainly an exercise in functional reactive programming for me.
 You could view this as the end result of my introduction to the subject:

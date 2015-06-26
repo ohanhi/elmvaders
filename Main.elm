@@ -5,6 +5,7 @@ import Graphics.Collage exposing (..)
 import Color exposing (..)
 import Time exposing (..)
 import Keyboard
+import Mouse
 import Window
 import Debug
 import Array
@@ -19,9 +20,12 @@ import Shot exposing (Shot, initShot)
 shotMinY  = -1
 shotSize  = { x = 0.005, y = 0.02 }
 shotMaxY  = 1
-moveRatio = 0.2
+shotMoveRatio = 0.2
+enemyMoveRatio = 0.02
 playerMoveRatio = 0.3
 shootDelay = 500 -- ms
+waveDelay = 10000 -- ms
+shipsPerWave = 8
 translucentGray = rgba 0 0 0 0.5
 groundLevel = 0.03
 playerHeight = 0.03
@@ -37,6 +41,7 @@ type alias World =
   , enemies : List Ship
   , shots   : List Shot
   , untilNextShot : Float
+  , untilNextWave : Float
   , score   : Int
   , state   : GameState
   , difficulty : Int
@@ -55,16 +60,17 @@ initWorld =
   , difficulty = initDifficulty
   , shots = []
   , untilNextShot = 0
+  , untilNextWave = 0
   , score = 0
   , state = Splash
   }
 
 initEnemies : Int -> List Ship
 initEnemies value =
-  let range = Array.toList (Array.initialize 10 identity)
+  let range = Array.toList (Array.initialize shipsPerWave identity)
       createEnemy = (\n ->
-        { initShip | pos <- { x = -0.5 + toFloat n / 10, y = 1.025 }
-                   , vel <- { x = 0, y = -0.1 * moveRatio }
+        { initShip | pos <- { x = -0.5 + toFloat n / shipsPerWave, y = 1.025 }
+                   , vel <- { x = 0, y = -(enemyMoveRatio * (1 + toFloat value / 100)) }
                    , size <- { x = 0.05, y = 0.025 }
                    , value <- value
                    })
@@ -115,7 +121,7 @@ playerShoot s untilNextShot shots =
       position = { sp | y <- sp.y + s.size.y / 2 }
   in if s.shooting && untilNextShot <= 0
         then { initShot | pos <- position
-                        , vel <- { x = 0, y = 2 * moveRatio } } :: shots
+                        , vel <- { x = 0, y = 2 * shotMoveRatio } } :: shots
         else shots
 
 updateShots : Float -> List Shot -> List Shot
@@ -126,6 +132,8 @@ updateShots dt shots =
 updatePlay : (Float, Keys) -> World -> World
 updatePlay (dt, keys) world =
   let dt'     = dt / 1000
+      dead    = List.any (\s -> s.pos.y <= groundLevel) world.enemies
+      state   = if dead then GameOver else Playing
       player  = updatePlayer (dt', keys) world.player
       collisions = findCollisions world.shots world.enemies
       hitShips = List.map fst collisions
@@ -142,35 +150,43 @@ updatePlay (dt, keys) world =
             then world.untilNextShot - dt
             else 0
           else shootDelay
+      (updatedEnemies, untilNextWave, difficulty) =
+        if world.untilNextWave > 0
+          then ( enemies
+               , world.untilNextWave - dt
+               , world.difficulty )
+          else ( enemies ++ (initEnemies world.difficulty)
+               , waveDelay
+               , world.difficulty + difficultyStep )
       updatedShots =
         shots
           |> updateShots dt'
           |> List.filter (\shot -> shot.pos.y < shotMaxY &&
                             shot.pos.y > shotMinY)
       score   = List.foldl (\s m -> m + s.value) world.score hitShips
-      dead    = List.any (\s -> s.pos.y <= groundLevel) world.enemies
-      state   = if dead then GameOver else Playing
       debug   = Debug.watch "World" world
   in  { world | player  <- player
-              , enemies <- enemies
+              , enemies <- updatedEnemies
               , shots   <- updatedShots
               , untilNextShot <- untilNextShot
+              , untilNextWave <- untilNextWave
+              , difficulty <- difficulty
               , state   <- state
               , score   <- score }
 
--- if any key is pressed, go to Playing state
-updateWait : Keys -> World -> World
-updateWait keys world =
-  if keys == { x=0, y=0 }
+-- if Mouse is pressed, go to Playing state
+updateWait : Bool -> World -> World
+updateWait mouseDown world =
+  if not mouseDown
     then world
     else { initWorld | state <- Playing }
 
-update : (Float, Keys) -> World -> World
-update (dt, keys) world =
+update : (Float, Keys, Bool) -> World -> World
+update (dt, keys, mouseDown) world =
   case world.state of
-    Splash   -> updateWait keys world
+    Splash   -> updateWait mouseDown world
     Playing  -> updatePlay (dt, keys) world
-    GameOver -> updateWait keys world
+    GameOver -> updateWait mouseDown world
 
 -- RENDER
 
@@ -233,12 +249,18 @@ formatText s =
 
 splashText : Form
 splashText =
-  formatText "Arrow keys to play."
+  formatText "Click to start.\nArrow keys to play."
 
 gameoverText : Int -> Form
 gameoverText score =
-  "Score: " ++ toString score ++ "\nArrow keys to restart."
+  "Score: " ++ toString score ++ "\nClick to restart."
     |> formatText
+
+scoreText : Int -> (Float, Float) -> Form
+scoreText score (w, h) =
+  "Score: " ++ toString score
+    |> formatText
+    |> move (80 - w/2, h/2 - 20)
 
 render : (Int, Int) -> World -> Element
 render (w, h) world =
@@ -246,14 +268,14 @@ render (w, h) world =
       gameForms = renderGame (w', h') world
   in  case world.state of
       Splash    -> collage w h (gameForms ++ [splashText])
-      Playing   -> collage w h gameForms
+      Playing   -> collage w h (gameForms ++ [scoreText world.score (w', h')])
       GameOver  -> collage w h (gameForms ++ [gameoverText world.score])
 
 -- SIGNALS
-inputSignal : Signal (Float, Keys)
+inputSignal : Signal (Float, Keys, Bool)
 inputSignal =
   let delta = fps 30
-      tuples = Signal.map2 (,) delta Keyboard.arrows
+      tuples = Signal.map3 (,,) delta Keyboard.arrows Mouse.isDown
   in  Signal.sampleOn delta tuples
 
 world : Signal World
