@@ -111,9 +111,11 @@ findCollisions shots ships =
         |> List.map (hitTuple shotRectTuples)
         |> List.filter (\(ship, shots) -> List.length shots > 0)
 
-updateEnemies : Float -> List Ship -> List Ship
-updateEnemies dt enemies =
-  List.map (Ship.applyPhysics dt) enemies
+updateEnemies : Float -> List Ship -> List Ship -> List Ship
+updateEnemies dt enemies hitShips =
+  enemies
+    |> List.filter (\s -> not (List.member s hitShips))
+    |> List.map (Ship.applyPhysics dt)
 
 playerShoot : Ship -> Float -> List Shot -> List Shot
 playerShoot s untilNextShot shots =
@@ -124,9 +126,13 @@ playerShoot s untilNextShot shots =
                         , vel <- { x = 0, y = 2 * shotMoveRatio } } :: shots
         else shots
 
-updateShots : Float -> List Shot -> List Shot
-updateShots dt shots =
-  List.map (Shot.applyPhysics dt) shots
+updateShots : Float -> List Shot -> List Shot -> List Shot
+updateShots dt shots hitShots =
+  shots
+    |> List.filter (\s -> not (List.member s hitShots))
+    |> List.map (Shot.applyPhysics dt)
+    |> List.filter (\shot -> shot.pos.y < shotMaxY &&
+                             shot.pos.y > shotMinY)
 
 -- take dt, `Keys` and `World`, return next state
 updatePlay : (Float, Keys) -> World -> World
@@ -138,36 +144,26 @@ updatePlay (dt, keys) world =
       collisions = findCollisions world.shots world.enemies
       hitShips = List.map fst collisions
       hitShots = List.concatMap snd collisions
-      enemies = world.enemies
-                  |> List.filter (\s -> not (List.member s hitShips))
-                  |> updateEnemies dt'
-      shots   = world.shots
-                  |> playerShoot player world.untilNextShot
-                  |> List.filter (\s -> not (List.member s hitShots))
+      enemies' = updateEnemies dt' world.enemies hitShips
+      shots'   = playerShoot player world.untilNextShot world.shots
       untilNextShot =
-        if List.length shots == List.length world.shots
-          then if world.untilNextShot > 0
-            then world.untilNextShot - dt
-            else 0
+        if List.length shots' == List.length world.shots
+          then world.untilNextShot - dt
           else shootDelay
-      (updatedEnemies, untilNextWave, difficulty) =
+      (enemies, untilNextWave, difficulty) =
         if world.untilNextWave > 0
-          then ( enemies
+          then ( enemies'
                , world.untilNextWave - dt
                , world.difficulty )
-          else ( enemies ++ (initEnemies world.difficulty)
+          else ( enemies' ++ (initEnemies world.difficulty)
                , waveDelay
                , world.difficulty + difficultyStep )
-      updatedShots =
-        shots
-          |> updateShots dt'
-          |> List.filter (\shot -> shot.pos.y < shotMaxY &&
-                            shot.pos.y > shotMinY)
+      shots   = updateShots dt' shots' hitShots
       score   = List.foldl (\s m -> m + s.value) world.score hitShips
       debug   = Debug.watch "World" world
   in  { world | player  <- player
-              , enemies <- updatedEnemies
-              , shots   <- updatedShots
+              , enemies <- enemies
+              , shots   <- shots
               , untilNextShot <- untilNextShot
               , untilNextWave <- untilNextWave
               , difficulty <- difficulty
